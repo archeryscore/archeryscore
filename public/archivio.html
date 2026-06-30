@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<link rel="icon" href="tiro_con_arco.ico" type="image/x-icon">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archivio Gare</title>
+    <link rel="stylesheet" href="css/style.css">
+<script src="js/auth-guard.js"></script>
+</head>
+
+<body>
+
+<div class="page-container">
+
+    <div class="page-header">
+        <a href="/" class="back-btn">← Home</a>
+        <h1>Archivio Gare</h1>
+    </div>
+
+    <div class="archive-actions">
+        <input id="searchArchive" type="text" placeholder="Cerca gara, luogo, arco...">
+
+        <button id="deleteAllBtn" class="danger-btn">
+            Cancella Archivio
+        </button>
+    </div>
+
+    <div id="archiveList" class="archive-list"></div>
+
+</div>
+
+<div id="modal" class="modal hidden">
+    <div class="modal-box">
+        <h2 id="modalTitle"></h2>
+        <div id="modalContent"></div>
+
+        <div class="modal-actions">
+            <button id="modalCancel" class="secondary-btn">Annulla</button>
+            <button id="modalConfirm" class="danger-btn">Conferma</button>
+        </div>
+    </div>
+</div>
+
+<div id="popup" class="popup hidden">
+    <div class="popup-content">
+        <div id="popupIcon" class="popup-icon"></div>
+        <div id="popupText" class="popup-text"></div>
+    </div>
+</div>
+
+<script src="js/season-filter.js?v=2"></script>
+<script src="js/confronto-personale.js?v=2"></script>
+<script src="js/archivio.js?v=2"></script>
+
+</body>
+</html>

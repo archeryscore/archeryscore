@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="tiro_con_arco.ico" type="image/x-icon">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistiche e Progressi</title>
+    <link rel="stylesheet" href="css/style.css">
+<script src="js/auth-guard.js"></script>
+</head>
+<body>
+<div class="page-container">
+    <div class="page-header">
+        <a href="/" class="back-btn">← Home</a>
+        <h1>Statistiche e Progressi</h1>
+    </div>
+
+    <div class="stats-tabs">
+        <button class="stats-tab active" data-tab="generali">Statistiche</button>
+        <button class="stats-tab" data-tab="valori">Percentuale valori</button>
+        <button class="stats-tab" data-tab="evoluzione">Evoluzione mese</button>
+        <button class="stats-tab" data-tab="progressi">Progressi</button>
+    </div>
+
+    <section id="tab-generali" class="stats-section active">
+        <div id="statsContainer"></div>
+    </section>
+
+    <section id="tab-valori" class="stats-section">
+        <div id="valoriContainer"></div>
+    </section>
+
+    <section id="tab-evoluzione" class="stats-section">
+        <div id="evoluzioneContainer"></div>
+    </section>
+
+    <section id="tab-progressi" class="stats-section">
+        <div id="progressContainer"></div>
+    </section>
+</div>
+
+<script src="js/season-filter.js?v=3"></script>
+<script src="js/statistiche.js?v=3"></script>
+</body>
+</html>

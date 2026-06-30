@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="tiro_con_arco.ico" type="image/x-icon">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuovo Allenamento</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="page-container">
+    <div class="page-header">
+        <a href="/" class="back-btn">← Home</a>
+        <h1 id="pageTitle">Nuovo Allenamento</h1>
+    </div>
+
+    <div class="form-card">
+        <div id="allenamentoDetails" class="gara-details">
+            <div id="allenamentoTypeBanner" class="gara-type-banner banner-training">Allenamento</div>
+
+            <div class="field-grid">
+                <div class="field">
+                    <label>Data</label>
+                    <input type="date" id="data">
+                </div>
+
+                <div class="field">
+                    <label>Tipo Allenamento</label>
+                    <select id="tipo_allenamento">
+                        <option value="">Seleziona</option>
+                        <option>Indoor</option>
+                        <option>Targa</option>
+                        <option>Campagna/H&F</option>
+                        <option>3D</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="field-grid">
+                <div class="field">
+                    <label>Tipo Arco</label>
+                    <select id="tipo_arco"></select>
+                </div>
+
+                <div id="distanceContainer" class="field">
+                    <label>Distanza</label>
+                    <select id="distanza"></select>
+                </div>
+
+                <div id="piazzoleContainer" class="field hidden">
+                    <label>Piazzole</label>
+                    <select id="piazzole"></select>
+                </div>
+            </div>
+
+            <button type="button" id="generaScore" class="generate-btn">Genera Score</button>
+        </div>
+    </div>
+
+    <div id="scoreContainer"></div>
+    <div id="keyboardLegend" class="legend-box hidden"></div>
+</div>
+
+<div id="popup" class="popup hidden">
+    <div class="popup-content">
+        <div id="popupIcon" class="popup-icon"></div>
+        <div id="popupText" class="popup-text"></div>
+    </div>
+</div>
+
+<script src="js/rules.js"></script>
+<script src="js/allenamenti.js?v=2"></script>
+</body>
+</html>

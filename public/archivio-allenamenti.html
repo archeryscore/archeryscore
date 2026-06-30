@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="tiro_con_arco.ico" type="image/x-icon">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archivio Allenamenti</title>
+    <link rel="stylesheet" href="css/style.css">
+<script src="js/auth-guard.js"></script>
+</head>
+<body>
+<div class="page-container">
+    <div class="page-header">
+        <a href="/" class="back-btn">← Home</a>
+        <h1>Archivio Allenamenti</h1>
+    </div>
+
+    <div class="archive-actions">
+        <input id="searchInput" type="text" placeholder="Cerca allenamento, arco, distanza...">
+        <button id="deleteAllBtn" class="danger-btn">Svuota Archivio</button>
+    </div>
+
+    <div id="allenamentiList" class="archive-list"></div>
+</div>
+
+<div id="scoreModal" class="modal hidden">
+    <div class="modal-box">
+        <div id="scoreModalContent"></div>
+        <div class="modal-actions">
+            <button id="closeScoreModal" class="secondary-btn">Chiudi</button>
+        </div>
+    </div>
+</div>
+
+<div id="confirmModal" class="confirm-modal hidden">
+    <div class="confirm-box">
+        <div class="confirm-icon">⚠️</div>
+        <h2 id="confirmTitle">Conferma eliminazione</h2>
+        <p id="confirmText">Vuoi eliminare questo allenamento?</p>
+        <div class="confirm-actions">
+            <button id="confirmCancel" class="secondary-btn">Annulla</button>
+            <button id="confirmOk" class="danger-confirm-btn">Elimina</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/season-filter.js?v=1"></script>
+<script src="js/confronto-personale.js?v=1"></script>
+<script src="js/allenamenti-view.js?v=2"></script>
+<script src="js/allenamenti-archivio.js?v=2"></script>
+</body>
+</html>

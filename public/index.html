@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <link rel="icon" href="tiro_con_arco.ico" type="image/x-icon">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archery Score</title>
+    <link rel="stylesheet" href="css/style.css">
+<script src="js/auth-guard.js"></script>
+</head>
+<body>
+<div class="home-top-actions">
+    <a href="/api/backup/miei-dati" class="home-action-btn backup-completo">💾 Backup miei dati</a>
+    <button id="importUserDataBtn" class="home-action-btn import-user-btn" type="button">📂 Carica miei dati</button>
+    <button id="cleanupDuplicatesBtn" class="home-action-btn cleanup-btn" type="button">🧹 Rimuovi doppioni</button>
+    <input id="importUserDataInput" type="file" accept=".json" hidden>
+    <a href="info.html" class="home-action-btn info-btn">ℹ️ Info</a>
+    <button class="home-action-btn logout-btn" onclick="logoutArcheryScore()">🚪 Esci</button>
+    <a href="statistiche.html" class="home-action-btn top-statistiche-btn">📋 Statistiche</a>
+    <a href="badge.html" class="home-action-btn badge-home-btn">🏅 Ricompense</a>
+</div>
+<div class="home-wrapper">
+    <div class="logo-target">🎯</div>
+    <h1 class="main-title">ARCHERY<span>SCORE</span></h1>
+    <p class="subtitle">Il diario digitale dell'arciere</p>
+
+    <div class="dashboard-grid">
+        <div class="dash-card dash-wide"><div class="dash-icon">🏆</div><span>Ultima Gara</span><strong id="dashUltimaGara">-</strong><small id="dashUltimaGaraData">-</small></div>
+        <div class="dash-card dash-wide"><div class="dash-icon">🏹</div><span>Ultimo Allenamento</span><strong id="dashUltimoAllenamento">-</strong><small id="dashUltimoAllenamentoData">-</small></div>
+        <div class="dash-card"><div class="dash-icon">📈</div><span>Media 30 giorni</span><strong id="dashMedia30">0</strong></div>
+        <div class="dash-card"><div class="dash-icon">🎯</div><span>Frecce anno</span><strong id="dashFrecceAnno">0</strong></div>
+        <div class="dash-card"><div class="dash-icon">🔥</div><span>Allenamenti mese</span><strong id="dashAllenamentiMese">0</strong></div>
+        <div class="dash-card"><div class="dash-icon">🏆</div><span>Gare mese</span><strong id="dashGareMese">0</strong></div>
+    </div>
+<div class="cards">
+        <a href="gare.html" class="card card-yellow"><div class="icon">🎯</div><h2>Nuova Gara</h2><p>Inserisci una competizione</p></a>
+        <a href="record.html" class="card card-blue"><div class="icon">🏆</div><h2>Record</h2><p>Analizza le performance</p></a>
+        <a href="mappa.html" class="card card-red"><div class="icon">📍</div><h2>Mappa</h2><p>Dove hai gareggiato?</p></a>
+        <a href="archivio.html" class="card card-white"><div class="icon">📁</div><h2>Archivio</h2><p>Storico completo</p></a>
+        <a href="classifica.html" class="card card-green"><div class="icon">🏆</div><h2>Classifica</h2><p>Le tue migliori 5 gare per tipologia</p></a>
+    </div>
+    <div class="stats location-stats">
+        <div class="stat">
+            <span id="gareCount">0</span>
+            <small>Gare Registrate</small>
+        </div>
+
+        <div class="stat location-stat-card">
+            <span id="localitaCount">0</span>
+            <small>Località Visitate</small>
+            <button class="mini-view-btn" data-luoghi-tab="localita">Vedi</button>
+        </div>
+
+        <div class="stat location-stat-card">
+            <span id="provinceCount">0</span>
+            <small>Province Visitate</small>
+            <button class="mini-view-btn" data-luoghi-tab="province">Vedi</button>
+        </div>
+
+        <div class="stat location-stat-card">
+            <span id="regioniCount">0</span>
+            <small>Regioni Visitate</small>
+            <button class="mini-view-btn" data-luoghi-tab="regioni">Vedi</button>
+        </div>
+    </div>
+    <div class="home-section-title">Allenamenti</div>
+    <div class="cards training-cards">
+        <a href="allenamento.html" class="card training-card training-new"><div class="icon">🏹</div><h2>Nuovo Allenamento</h2><p>Inserisci una sessione</p></a>
+        <a href="record-allenamenti.html" class="card training-card training-record"><div class="icon">💪</div><h2>Record Allenamenti</h2><p>Analizza i progressi</p></a>
+        <a href="archivio-allenamenti.html" class="card training-card training-archive"><div class="icon">📘</div><h2>Archivio Allenamenti</h2><p>Storico sessioni</p></a>
+        <a href="classifica-allenamenti.html" class="card training-card training-rank"><div class="icon">🥇</div><h2>Classifica Allenamenti</h2><p>Le migliori sessioni</p></a>
+    </div>
+</div>
+<script src="js/home.js"></script>
+<script src="js/luoghi-home.js?v=3"></script>
+<script src="js/import-user-data.js?v=1"></script>
+<script src="js/dashboard.js?v=1"></script>
+</body>
+</html>

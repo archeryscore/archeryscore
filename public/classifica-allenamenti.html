@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="tiro_con_arco.ico" type="image/x-icon">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classifica Allenamenti</title>
+    <link rel="stylesheet" href="css/style.css">
+<script src="js/auth-guard.js"></script>
+</head>
+<body>
+<div class="page-container">
+    <div class="page-header">
+        <a href="/" class="back-btn">← Home</a>
+        <h1>Classifica Allenamenti 🥇</h1>
+    </div>
+
+    <div id="classificaList" class="record-list"></div>
+</div>
+
+<div id="scoreModal" class="modal hidden">
+    <div class="modal-box">
+        <div id="scoreModalContent"></div>
+        <div class="modal-actions">
+            <button id="closeScoreModal" class="secondary-btn">Chiudi</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/season-filter.js?v=1"></script>
+<script src="js/confronto-personale.js?v=1"></script>
+<script src="js/allenamenti-view.js?v=2"></script>
+<script src="js/allenamenti-classifica.js?v=2"></script>
+</body>
+</html>

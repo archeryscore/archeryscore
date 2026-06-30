@@ -1,0 +1,30 @@
+# Database
+database/
+data/
+*.sqlite
+*.db
+
+# Backup utenti
+backup/
+*.archery
+*.json
+
+# Node
+node_modules/
+
+# Log
+*.log
+npm-debug.log*
+
+# Configurazioni
+.env
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# ZIP
+*.zip

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="tiro_con_arco.ico" type="image/x-icon">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Nuova Gara</title>
+
+    <link rel="stylesheet" href="css/style.css">
+<script src="js/auth-guard.js"></script>
+</head>
+
+<body>
+
+<div class="page-container">
+
+    <div class="page-header">
+        <a href="/" class="back-btn">← Home</a>
+        <h1 id="pageTitle">Nuova Gara</h1>
+    </div>
+
+    <div class="form-card">
+
+        <div class="field-row">
+
+            <div class="field">
+                <label>Codice FITARCO</label>
+
+                <input
+                    type="text"
+                    id="codice_gara"
+                    placeholder="Es. R2604017">
+            </div>
+
+            <button
+                type="button"
+                id="btnFitarco"
+                class="fitarco-btn">
+                Carica
+            </button>
+
+        </div>
+
+        <div id="garaDetails" class="gara-details hidden">
+
+            <div id="garaTypeBanner" class="gara-type-banner"></div>
+
+            <div class="field">
+
+                <label>Nome Gara</label>
+
+                <input
+                    type="text"
+                    id="nome">
+
+            </div>
+
+            <div class="field-grid">
+
+                <div class="field">
+                    <label>Data</label>
+
+                    <input
+                        type="date"
+                        id="data">
+                </div>
+
+                <div class="field">
+                    <label>Luogo</label>
+
+                    <input
+                        type="text"
+                        id="luogo"
+                        placeholder="Es. Terni (TR)">
+                </div>
+
+            </div>
+
+  <div class="field">
+
+    <label>Indirizzo gara, opzionale ma molto più precisa la mappa (inserire luogo di gara da invito Fitarco)</label>
+
+    <input
+        type="text"
+        id="indirizzo"
+        placeholder="Indirizzo gara">
+
+</div>
+
+            <div class="field-grid">
+
+                <div
+                    id="tipoGaraContainer"
+                    class="field">
+
+                    <label>Tipo Gara</label>
+
+                    <select id="tipo_gara">
+
+                        <option value="">Seleziona</option>
+
+                        <option>Indoor 18m</option>
+                        <option>Indoor 25m</option>
+                        <option>Indoor 18+25</option>
+
+                        <option>Targa</option>
+                        <option>Doppio Targa</option>
+
+                        <option>Campagna/H&F 12+12</option>
+                        <option>Campagna/H&F 24+24</option>
+
+                        <option>3D 24</option>
+                        <option>3D 48</option>
+
+                    </select>
+
+                </div>
+
+                <div class="field">
+
+                    <label>Tipo Arco</label>
+
+                    <select id="tipo_arco"></select>
+
+                </div>
+
+            </div>
+
+            <div
+                id="distanceContainer"
+                class="field">
+
+                <label>Distanza</label>
+
+                <select id="distanza"></select>
+
+            </div>
+
+            <button
+                type="button"
+                id="generaScore"
+                class="generate-btn">
+                Genera Score
+            </button>
+
+        </div>
+
+    </div>
+
+    <div id="scoreContainer"></div>
+
+    <div id="keyboardLegend" class="legend-box hidden"></div>
+
+</div>
+
+<div id="popup" class="popup hidden">
+
+    <div class="popup-content">
+
+        <div
+            id="popupIcon"
+            class="popup-icon">
+        </div>
+
+        <div
+            id="popupText"
+            class="popup-text">
+        </div>
+
+    </div>
+
+</div>
+
+<script src="js/rules.js"></script>
+<script src="/js/gare.js?v=999"></script>
+
+</body>
+</html>
