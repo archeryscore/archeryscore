@@ -4,76 +4,166 @@
     <link rel="icon" href="tiro_con_arco.ico" type="image/x-icon">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Archery Score</title>
+    <title>ArcheryScore - Il diario digitale dell'arciere</title>
+    <meta name="description" content="ArcheryScore è il diario digitale dell'arciere: gare, allenamenti, statistiche, progressi, mappa, badge e backup in un'unica applicazione.">
     <link rel="stylesheet" href="css/style.css">
-<script src="js/auth-guard.js"></script>
 </head>
-<body>
-<div class="home-top-actions">
-    <a href="/api/backup/miei-dati" class="home-action-btn backup-completo">💾 Backup miei dati</a>
-    <button id="importUserDataBtn" class="home-action-btn import-user-btn" type="button">📂 Carica miei dati</button>
-    <button id="cleanupDuplicatesBtn" class="home-action-btn cleanup-btn" type="button">🧹 Rimuovi doppioni</button>
-    <input id="importUserDataInput" type="file" accept=".json" hidden>
-    <a href="info.html" class="home-action-btn info-btn">ℹ️ Info</a>
-    <button class="home-action-btn logout-btn" onclick="logoutArcheryScore()">🚪 Esci</button>
-    <a href="statistiche.html" class="home-action-btn top-statistiche-btn">📋 Statistiche</a>
-    <a href="badge.html" class="home-action-btn badge-home-btn">🏅 Ricompense</a>
-</div>
-<div class="home-wrapper">
-    <div class="logo-target">🎯</div>
-    <h1 class="main-title">ARCHERY<span>SCORE</span></h1>
-    <p class="subtitle">Il diario digitale dell'arciere</p>
+<body class="landing-body">
 
-    <div class="dashboard-grid">
-        <div class="dash-card dash-wide"><div class="dash-icon">🏆</div><span>Ultima Gara</span><strong id="dashUltimaGara">-</strong><small id="dashUltimaGaraData">-</small></div>
-        <div class="dash-card dash-wide"><div class="dash-icon">🏹</div><span>Ultimo Allenamento</span><strong id="dashUltimoAllenamento">-</strong><small id="dashUltimoAllenamentoData">-</small></div>
-        <div class="dash-card"><div class="dash-icon">📈</div><span>Media 30 giorni</span><strong id="dashMedia30">0</strong></div>
-        <div class="dash-card"><div class="dash-icon">🎯</div><span>Frecce anno</span><strong id="dashFrecceAnno">0</strong></div>
-        <div class="dash-card"><div class="dash-icon">🔥</div><span>Allenamenti mese</span><strong id="dashAllenamentiMese">0</strong></div>
-        <div class="dash-card"><div class="dash-icon">🏆</div><span>Gare mese</span><strong id="dashGareMese">0</strong></div>
+<header class="landing-nav">
+    <a class="landing-brand" href="/">
+        <span class="landing-logo">🎯</span>
+        <span>ARCHERY<span>SCORE</span></span>
+    </a>
+
+    <nav class="landing-menu">
+        <a href="#funzioni">Funzioni</a>
+        <a href="#perche">Perché</a>
+        <a href="#faq">FAQ</a>
+        <a href="info.html">Info</a>
+    </nav>
+
+    <div class="landing-actions">
+        <a href="login.html" class="landing-login">Accedi</a>
+        <a href="register.html" class="landing-register">Registrati</a>
     </div>
-<div class="cards">
-        <a href="gare.html" class="card card-yellow"><div class="icon">🎯</div><h2>Nuova Gara</h2><p>Inserisci una competizione</p></a>
-        <a href="record.html" class="card card-blue"><div class="icon">🏆</div><h2>Record</h2><p>Analizza le performance</p></a>
-        <a href="mappa.html" class="card card-red"><div class="icon">📍</div><h2>Mappa</h2><p>Dove hai gareggiato?</p></a>
-        <a href="archivio.html" class="card card-white"><div class="icon">📁</div><h2>Archivio</h2><p>Storico completo</p></a>
-        <a href="classifica.html" class="card card-green"><div class="icon">🏆</div><h2>Classifica</h2><p>Le tue migliori 5 gare per tipologia</p></a>
-    </div>
-    <div class="stats location-stats">
-        <div class="stat">
-            <span id="gareCount">0</span>
-            <small>Gare Registrate</small>
+</header>
+
+<main>
+    <section class="landing-hero">
+        <div class="landing-hero-text">
+            <div class="landing-pill">🏹 Versione 1.0</div>
+            <h1>Il diario digitale dell'arciere</h1>
+            <p>
+                Registra gare e allenamenti, monitora i progressi,
+                scopri record personali, statistiche, badge e luoghi visitati.
+                Tutto in un'unica app moderna.
+            </p>
+
+            <div class="landing-cta">
+                <a href="register.html" class="landing-primary">Inizia ora</a>
+                <a href="login.html" class="landing-secondary">Accedi</a>
+            </div>
+
+            <div class="landing-trust">
+                <span>✅ Backup personale</span>
+                <span>✅ Gare e allenamenti separati</span>
+                <span>✅ Statistiche chiare</span>
+            </div>
         </div>
 
-        <div class="stat location-stat-card">
-            <span id="localitaCount">0</span>
-            <small>Località Visitate</small>
-            <button class="mini-view-btn" data-luoghi-tab="localita">Vedi</button>
+        <div class="landing-preview">
+            <div class="preview-top">
+                <span></span><span></span><span></span>
+            </div>
+            <div class="preview-logo">ARCHERY<span>SCORE</span></div>
+            <div class="preview-grid">
+                <div><small>Ultima Gara</small><strong>563</strong></div>
+                <div><small>Ultimo Allenamento</small><strong>490</strong></div>
+                <div><small>Media 30 giorni</small><strong>510.5</strong></div>
+            </div>
+            <div class="preview-cards">
+                <div>🎯<strong>Nuova Gara</strong><small>Inserisci una competizione</small></div>
+                <div>🏹<strong>Allenamenti</strong><small>Salva ogni sessione</small></div>
+                <div>📈<strong>Statistiche</strong><small>Analizza i progressi</small></div>
+                <div>🗺️<strong>Mappa</strong><small>Dove hai gareggiato</small></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="funzioni" class="landing-section">
+        <div class="landing-section-title">
+            <h2>Tutto quello che serve a un arciere</h2>
+            <p>ArcheryScore non è solo un archivio: è uno storico completo della tua crescita sportiva.</p>
         </div>
 
-        <div class="stat location-stat-card">
-            <span id="provinceCount">0</span>
-            <small>Province Visitate</small>
-            <button class="mini-view-btn" data-luoghi-tab="province">Vedi</button>
+        <div class="feature-grid">
+            <article class="feature-card"><span>🏆</span><h3>Gare</h3><p>Registra competizioni indoor, targa, 3D, H&F e indoor all'aperto.</p></article>
+            <article class="feature-card"><span>🏹</span><h3>Allenamenti</h3><p>Salva sessioni, distanze, piazzole e punteggi come nelle gare.</p></article>
+            <article class="feature-card"><span>📈</span><h3>Statistiche</h3><p>Medie, percentuali valori, evoluzione mensile e confronti personali.</p></article>
+            <article class="feature-card"><span>🥇</span><h3>Record</h3><p>Trova rapidamente le migliori prestazioni per disciplina, arco e distanza.</p></article>
+            <article class="feature-card"><span>🗺️</span><h3>Mappa</h3><p>Visualizza località, province e regioni dove hai gareggiato.</p></article>
+            <article class="feature-card"><span>💾</span><h3>Backup</h3><p>Esporta e ricarica i tuoi dati personali quando vuoi.</p></article>
+        </div>
+    </section>
+
+    <section id="perche" class="landing-story">
+        <div>
+            <h2>Perché nasce ArcheryScore?</h2>
+            <p>
+                Per anni molti arcieri hanno conservato i punteggi su fogli, quaderni o file sparsi.
+                ArcheryScore nasce per trasformare quei numeri in un vero diario:
+                una memoria ordinata di gare, allenamenti, miglioramenti, difficoltà e risultati.
+            </p>
+        </div>
+        <div class="story-stat">
+            <strong>100%</strong>
+            <span>pensato per gli arcieri</span>
+        </div>
+    </section>
+
+    <section class="landing-section">
+        <div class="landing-section-title">
+            <h2>Una panoramica semplice e completa</h2>
+            <p>Ogni area dell'app è pensata per essere chiara, veloce e leggibile anche da smartphone.</p>
         </div>
 
-        <div class="stat location-stat-card">
-            <span id="regioniCount">0</span>
-            <small>Regioni Visitate</small>
-            <button class="mini-view-btn" data-luoghi-tab="regioni">Vedi</button>
+        <div class="screenshot-grid">
+            <div class="screen-card">🏠<strong>Home</strong><span>Dashboard con ultimi risultati e scorciatoie.</span></div>
+            <div class="screen-card">📊<strong>Statistiche</strong><span>Medie, evoluzione e distribuzione valori.</span></div>
+            <div class="screen-card">🏅<strong>Ricompense</strong><span>Badge ottenuti con data e descrizione.</span></div>
+            <div class="screen-card">📍<strong>Luoghi visitati</strong><span>Località, province e regioni filtrabili per stagione.</span></div>
         </div>
+    </section>
+
+    <section id="faq" class="landing-section landing-faq">
+        <div class="landing-section-title">
+            <h2>Domande frequenti</h2>
+        </div>
+
+        <details open>
+            <summary>ArcheryScore è gratuito?</summary>
+            <p>La versione di prova sarà gratuita. In futuro potrà essere aggiunto un dominio o servizi più avanzati.</p>
+        </details>
+
+        <details>
+            <summary>I miei dati sono separati da quelli degli altri utenti?</summary>
+            <p>Sì. Ogni account ha gare, allenamenti, statistiche e backup separati.</p>
+        </details>
+
+        <details>
+            <summary>Posso esportare i miei dati?</summary>
+            <p>Sì. Ogni utente può scaricare il proprio backup personale e ricaricarlo quando serve.</p>
+        </details>
+
+        <details>
+            <summary>Funziona da smartphone?</summary>
+            <p>Sì. L'interfaccia è pensata per essere usata anche da telefono e tablet.</p>
+        </details>
+    </section>
+
+    <section class="landing-final">
+        <h2>Pronto a creare il tuo diario digitale?</h2>
+        <p>Inizia a registrare gare e allenamenti e guarda la tua storia crescere nel tempo.</p>
+        <div class="landing-cta">
+            <a href="register.html" class="landing-primary">Registrati</a>
+            <a href="login.html" class="landing-secondary">Accedi</a>
+        </div>
+    </section>
+</main>
+
+<footer class="landing-footer">
+    <div>
+        <strong>ARCHERY<span>SCORE</span></strong>
+        <p>Il diario digitale dell'arciere.</p>
     </div>
-    <div class="home-section-title">Allenamenti</div>
-    <div class="cards training-cards">
-        <a href="allenamento.html" class="card training-card training-new"><div class="icon">🏹</div><h2>Nuovo Allenamento</h2><p>Inserisci una sessione</p></a>
-        <a href="record-allenamenti.html" class="card training-card training-record"><div class="icon">💪</div><h2>Record Allenamenti</h2><p>Analizza i progressi</p></a>
-        <a href="archivio-allenamenti.html" class="card training-card training-archive"><div class="icon">📘</div><h2>Archivio Allenamenti</h2><p>Storico sessioni</p></a>
-        <a href="classifica-allenamenti.html" class="card training-card training-rank"><div class="icon">🥇</div><h2>Classifica Allenamenti</h2><p>Le migliori sessioni</p></a>
+    <div>
+        <a href="info.html">Info</a>
+        <a href="login.html">Accedi</a>
+        <a href="register.html">Registrati</a>
+        <a href="mailto:archeryscore.support@gmail.com">Supporto</a>
     </div>
-</div>
-<script src="js/home.js"></script>
-<script src="js/luoghi-home.js?v=3"></script>
-<script src="js/import-user-data.js?v=1"></script>
-<script src="js/dashboard.js?v=1"></script>
+</footer>
+
 </body>
 </html>

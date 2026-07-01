@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <link rel="icon" href="tiro_con_arco.ico" type="image/x-icon">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - ArcheryScore</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <main class="admin-page">
+        <a class="back-link" href="/home.html">← Home</a>
+        <h1>Admin ArcheryScore</h1>
+        <p class="admin-subtitle">Gestione utenti, dati registrati e account.</p>
+
+        <section class="admin-summary" id="adminSummary"></section>
+
+        <section class="admin-card">
+            <div class="admin-toolbar">
+                <h2>Utenti registrati</h2>
+                <button onclick="caricaUtenti()">Aggiorna</button>
+            </div>
+            <div id="adminUsers" class="admin-users"></div>
+        </section>
+
+        <section class="admin-card hidden" id="userDetailsCard">
+            <div class="admin-toolbar">
+                <h2 id="detailsTitle">Dettaglio utente</h2>
+                <button onclick="chiudiDettaglio()">Chiudi</button>
+            </div>
+            <div id="userDetails"></div>
+        </section>
+    </main>
+
+    <script src="js/auth-guard.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>
