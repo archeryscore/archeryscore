@@ -1,5 +1,6 @@
 # Database
-data/
+data/*
+!data/.keep
 *.sqlite
 *.db
 
