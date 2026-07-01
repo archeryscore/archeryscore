@@ -1,5 +1,4 @@
 # Database
-database/
 data/
 *.sqlite
 *.db
