@@ -16,7 +16,47 @@ app.use(express.json({ limit:"50mb" }));
 // AUTH MULTIUTENTE
 // =======================
 const COOKIE_NAME = "archeryscore_session";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "archeryscore.support@gmail.com";
+const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3001";
 const EMAIL_VERIFICATION_REQUIRED = String(process.env.EMAIL_VERIFICATION_REQUIRED || "false").toLowerCase() === "true";
+const EMAIL_PROVIDER_READY = EMAIL_VERIFICATION_REQUIRED && !!process.env.RESEND_API_KEY;
+
+
+async function sendArcheryMail({to,subject,html,text}){
+    if(!process.env.RESEND_API_KEY){
+        console.log("Email non attiva, RESEND_API_KEY mancante:", subject, to);
+        return {sent:false, reason:"email-disabled"};
+    }
+
+    const from = process.env.RESEND_FROM || "ArcheryScore <onboarding@resend.dev>";
+    const response = await fetch("https://api.resend.com/emails",{
+        method:"POST",
+        headers:{
+            "Authorization":"Bearer " + process.env.RESEND_API_KEY,
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify({from,to:[to],subject,html,text:text||""})
+    });
+
+    const data = await response.json().catch(()=>({}));
+    if(!response.ok){
+        throw new Error(data.message || data.error || JSON.stringify(data));
+    }
+    console.log("Email inviata via Resend", subject, to, data.id || "");
+    return {sent:true,id:data.id};
+}
+
+function buildEmailButton(url,label){
+    return `<div style="margin:28px 0"><a href="${url}" style="display:inline-block;background:#ffcc00;color:#061044;padding:14px 22px;border-radius:14px;text-decoration:none;font-weight:900">${label}</a></div>`;
+}
+
+function archeryEmailTemplate(title,message,buttonHtml,small=""){
+    return `<div style="font-family:Arial,sans-serif;background:#020b3a;padding:28px;color:#fff"><div style="max-width:620px;margin:auto;background:#0d1f6b;border:1px solid rgba(255,255,255,.15);border-radius:22px;padding:28px"><h1 style="margin:0 0 10px;color:#ffcc00">🎯 ARCHERYSCORE</h1><h2 style="margin:0 0 18px;color:#fff">${title}</h2><p style="font-size:17px;line-height:1.5;color:#c7d2ff">${message}</p>${buttonHtml||""}${small?`<p style="font-size:13px;line-height:1.4;color:#9aa7d9">${small}</p>`:""}</div></div>`;
+}
+
+function isEmailValid(email){
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email||"").trim());
+}
 
 function parseCookies(req){
     const header = req.headers.cookie || "";
@@ -86,6 +126,11 @@ db.serialize(() => {
         username TEXT UNIQUE NOT NULL,
         email TEXT UNIQUE,
         password_hash TEXT NOT NULL,
+        role TEXT DEFAULT 'user',
+        email_verified INTEGER DEFAULT 1,
+        verification_token TEXT,
+        blocked INTEGER DEFAULT 0,
+        last_login TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )`);
 
@@ -103,7 +148,16 @@ db.serialize(() => {
         used INTEGER DEFAULT 0
     )`);
 
-    db.run("INSERT OR IGNORE INTO users(id,username,email,password_hash) VALUES(1,'admin','',?)",[hashPassword("admin123")]);
+    addColumnIfMissing("users","role","TEXT DEFAULT 'user'");
+    addColumnIfMissing("users","email_verified","INTEGER DEFAULT 1");
+    addColumnIfMissing("users","verification_token","TEXT");
+    addColumnIfMissing("users","blocked","INTEGER DEFAULT 0");
+    addColumnIfMissing("users","last_login","TEXT");
+
+    db.run("INSERT OR IGNORE INTO users(id,username,email,password_hash,role,email_verified,blocked) VALUES(1,'admin',?,?,'admin',1,0)",[ADMIN_EMAIL,hashPassword("admin123")], err => {
+        if(err) console.error("Init admin:", err.message);
+        db.run("UPDATE users SET role='admin', email_verified=1, blocked=0 WHERE id=1 OR username='admin'");
+    });
 
     addColumnIfMissing("gare","user_id","INTEGER DEFAULT 1",() => {
         db.run("UPDATE gare SET user_id = 1 WHERE user_id IS NULL", [], err => {
@@ -129,7 +183,7 @@ function authMiddleware(req,res,next){
     }
 
     db.get(`
-        SELECT sessions.*, users.username, users.email
+        SELECT sessions.*, users.username, users.email, users.role, users.email_verified, users.blocked
         FROM sessions
         JOIN users ON users.id = sessions.user_id
         WHERE sessions.token = ?
@@ -139,7 +193,17 @@ function authMiddleware(req,res,next){
             return res.status(401).json({ success:false, auth:false, message:"Sessione scaduta" });
         }
 
-        req.user = { id:row.user_id, username:row.username, email:row.email };
+        if(Number(row.blocked || 0) === 1){
+            return res.status(403).json({ success:false, message:"Account bloccato" });
+        }
+        req.user = {
+            id:row.user_id,
+            username:row.username,
+            email:row.email,
+            role:row.role || "user",
+            email_verified:Number(row.email_verified || 0),
+            blocked:Number(row.blocked || 0)
+        };
         next();
     });
 }
@@ -163,18 +227,77 @@ function createSession(userId,res,cb){
     });
 }
 
-app.post("/api/auth/register",(req,res)=>{
+app.post("/api/auth/register",async (req,res)=>{
     const username = String(req.body.username || "").trim();
-    const email = String(req.body.email || "").trim();
+    const email = String(req.body.email || "").trim().toLowerCase();
     const password = String(req.body.password || "");
 
     if(username.length < 3 || password.length < 6){
         return res.status(400).json({ success:false, message:"Username minimo 3 caratteri e password minimo 6" });
     }
+    if(email && !isEmailValid(email)){
+        return res.status(400).json({ success:false, message:"Inserisci una email valida" });
+    }
 
-    db.run("INSERT INTO users(username,email,password_hash) VALUES(?,?,?)",[username,email,hashPassword(password)],function(err){
-        if(err) return res.status(400).json({ success:false, message:"Username o email già registrati" });
-        createSession(this.lastID,res,()=>res.json({ success:true, user:{ id:this.lastID, username, email } }));
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verified = EMAIL_VERIFICATION_REQUIRED ? 0 : 1;
+
+    db.run(
+        "INSERT INTO users(username,email,password_hash,role,email_verified,verification_token,blocked) VALUES(?,?,?,?,?,?,0)",
+        [username,email,hashPassword(password),"user",verified,verificationToken],
+        async function(err){
+            if(err) return res.status(400).json({ success:false, message:"Username o email già registrati" });
+
+            if(EMAIL_VERIFICATION_REQUIRED && email){
+                const verifyUrl = `${APP_BASE_URL}/verify-email.html?token=${verificationToken}`;
+                try{
+                    await sendArcheryMail({
+                        to:email,
+                        subject:"Conferma il tuo account ArcheryScore",
+                        text:`Conferma il tuo account aprendo questo link: ${verifyUrl}`,
+                        html:archeryEmailTemplate("Conferma il tuo account",`Ciao ${username}, grazie per esserti registrato su ArcheryScore. Per attivare il tuo account conferma la tua email.`,buildEmailButton(verifyUrl,"Conferma email"),`Se il pulsante non funziona, copia questo link nel browser: ${verifyUrl}`)
+                    });
+                }catch(mailErr){
+                    console.error("Errore invio verifica email:", mailErr.message);
+                }
+                return res.json({success:true,pending_verification:true,message:"Account creato. Controlla la tua email per confermare la registrazione."});
+            }
+
+            createSession(this.lastID,res,()=>res.json({
+                success:true,
+                message:"Account creato. Puoi accedere subito. La verifica email sarà attivata quando avremo il dominio.",
+                user:{ id:this.lastID, username, email, role:"user", email_verified:verified }
+            }));
+        }
+    );
+});
+
+app.get("/api/auth/verify",(req,res)=>{
+    const token = String(req.query.token || "").trim();
+    if(!token) return res.status(400).json({success:false,message:"Token mancante"});
+    db.get("SELECT id FROM users WHERE verification_token = ?",[token],(err,user)=>{
+        if(err || !user) return res.status(400).json({success:false,message:"Link non valido o già utilizzato"});
+        db.run("UPDATE users SET email_verified=1, verification_token=NULL WHERE id=?",[user.id],err=>{
+            if(err) return res.status(500).json({success:false,message:"Errore conferma email"});
+            res.json({success:true,message:"Email confermata. Ora puoi accedere."});
+        });
+    });
+});
+
+app.post("/api/auth/resend-verification",async (req,res)=>{
+    if(!EMAIL_VERIFICATION_REQUIRED){
+        return res.json({success:true,message:"Verifica email non ancora attiva. Puoi accedere subito."});
+    }
+    const email = String(req.body.email || "").trim().toLowerCase();
+    if(!isEmailValid(email)) return res.status(400).json({success:false,message:"Inserisci una email valida"});
+    db.get("SELECT * FROM users WHERE email = ?",[email],async (err,user)=>{
+        if(err || !user || Number(user.email_verified||0)===1) return res.json({success:true,message:"Se l'account è da confermare, riceverai una nuova email."});
+        const token=crypto.randomBytes(32).toString("hex");
+        db.run("UPDATE users SET verification_token=? WHERE id=?",[token,user.id],async()=>{
+            const verifyUrl=`${APP_BASE_URL}/verify-email.html?token=${token}`;
+            try{ await sendArcheryMail({to:user.email,subject:"Conferma il tuo account ArcheryScore",text:`Conferma: ${verifyUrl}`,html:archeryEmailTemplate("Conferma il tuo account",`Ciao ${user.username}, clicca sul pulsante per attivare il tuo account.`,buildEmailButton(verifyUrl,"Conferma email"),`Link: ${verifyUrl}`)}); }catch(e){ console.error("Errore reinvio verifica:",e.message); }
+            res.json({success:true,message:"Se l'account è da confermare, riceverai una nuova email."});
+        });
     });
 });
 
@@ -182,12 +305,18 @@ app.post("/api/auth/login",(req,res)=>{
     const username = String(req.body.username || "").trim();
     const password = String(req.body.password || "");
 
-    db.get("SELECT * FROM users WHERE username = ? OR email = ?",[username,username],(err,user)=>{
+    db.get("SELECT * FROM users WHERE username = ? OR email = ?",[username,username.toLowerCase()],(err,user)=>{
         if(err || !user || !verifyPassword(password,user.password_hash)){
             return res.status(401).json({ success:false, message:"Credenziali non valide" });
         }
-
-        createSession(user.id,res,()=>res.json({ success:true, user:{ id:user.id, username:user.username, email:user.email } }));
+        if(Number(user.blocked || 0) === 1){
+            return res.status(403).json({ success:false, message:"Account bloccato. Contatta il supporto." });
+        }
+        if(EMAIL_VERIFICATION_REQUIRED && (user.role || "user") !== "admin" && Number(user.email_verified || 0) !== 1){
+            return res.status(403).json({success:false,needs_verification:true,message:"Devi confermare la tua email prima di accedere."});
+        }
+        db.run("UPDATE users SET last_login = ? WHERE id = ?",[nowSqlDate(),user.id]);
+        createSession(user.id,res,()=>res.json({ success:true, user:{ id:user.id, username:user.username, email:user.email, role:user.role||"user", email_verified:Number(user.email_verified||0) } }));
     });
 });
 
@@ -216,19 +345,18 @@ app.get("/api/auth/me",(req,res)=>{
 });
 
 app.post("/api/password/request-reset",(req,res)=>{
-    const key = String(req.body.email || req.body.username || "").trim();
-
-    db.get("SELECT * FROM users WHERE email = ? OR username = ?",[key,key],(err,user)=>{
-        if(err || !user){
-            return res.json({ success:true, message:"Se l'utente esiste, è stato generato un codice." });
-        }
-
-        const token = crypto.randomBytes(18).toString("hex");
+    if(!EMAIL_VERIFICATION_REQUIRED){
+        return res.json({ success:true, message:"Reset via email non ancora attivo. Contatta l'amministratore." });
+    }
+    const key = String(req.body.email || req.body.username || "").trim().toLowerCase();
+    db.get("SELECT * FROM users WHERE email = ? OR username = ?",[key,key],async (err,user)=>{
+        if(err || !user) return res.json({ success:true, message:"Se l'account esiste, riceverai una email per il reset." });
+        const token = crypto.randomBytes(32).toString("hex");
         const expires = new Date(Date.now()+1000*60*30).toISOString().slice(0,19).replace("T"," ");
-
-        db.run("INSERT INTO password_resets(token,user_id,expires_at) VALUES(?,?,?)",[token,user.id,expires],()=>{
-            // In locale il codice viene mostrato; online lo invieremo via email.
-            res.json({ success:true, message:"Codice generato", reset_token:token });
+        const resetUrl = `${APP_BASE_URL}/reset-password.html?token=${token}`;
+        db.run("INSERT INTO password_resets(token,user_id,expires_at) VALUES(?,?,?)",[token,user.id,expires],async()=>{
+            try{ await sendArcheryMail({to:user.email,subject:"Reset password ArcheryScore",text:`Reset: ${resetUrl}`,html:archeryEmailTemplate("Reset password",`Ciao ${user.username}, clicca sul pulsante per impostare una nuova password.`,buildEmailButton(resetUrl,"Reimposta password"),`Link: ${resetUrl}`)}); }catch(e){ console.error("Errore invio reset:",e.message); }
+            res.json({success:true,message:"Se l'account esiste, riceverai una email per il reset."});
         });
     });
 });
@@ -251,6 +379,78 @@ app.post("/api/password/reset",(req,res)=>{
     });
 });
 
+
+
+function requireAdmin(req,res,next){
+    if(!req.user || req.user.role !== "admin") return res.status(403).json({success:false,message:"Accesso admin negato"});
+    next();
+}
+function dbGetP(sql,params=[]){ return new Promise(resolve=>db.get(sql,params,(err,row)=>resolve(err?null:row))); }
+function dbAllP(sql,params=[]){ return new Promise(resolve=>db.all(sql,params,(err,rows)=>resolve(err?[]:(rows||[])))); }
+
+app.get("/api/admin/summary", requireAdmin, async (req,res)=>{
+    const utenti=await dbGetP("SELECT COUNT(*) AS total FROM users");
+    const verificati=await dbGetP("SELECT COUNT(*) AS total FROM users WHERE email_verified = 1");
+    const bloccati=await dbGetP("SELECT COUNT(*) AS total FROM users WHERE blocked = 1");
+    const gare=await dbGetP("SELECT COUNT(*) AS total FROM gare");
+    const allenamenti=await dbGetP("SELECT COUNT(*) AS total FROM allenamenti");
+    res.json({success:true,utenti:Number(utenti?.total||0),verificati:Number(verificati?.total||0),bloccati:Number(bloccati?.total||0),gare:Number(gare?.total||0),allenamenti:Number(allenamenti?.total||0)});
+});
+app.get("/api/admin/users", requireAdmin, async (req,res)=>{
+    const users=await dbAllP(`SELECT users.id,users.username,users.email,users.role,users.email_verified,users.blocked,users.created_at,users.last_login,(SELECT COUNT(*) FROM gare WHERE gare.user_id=users.id) AS gare_count,(SELECT COUNT(*) FROM allenamenti WHERE allenamenti.user_id=users.id) AS allenamenti_count FROM users ORDER BY users.id ASC`);
+    res.json({success:true,users});
+});
+app.get("/api/admin/users/:id/data", requireAdmin, async (req,res)=>{
+    const id=Number(req.params.id);
+    const user=await dbGetP("SELECT id,username,email,role,email_verified,blocked,created_at,last_login FROM users WHERE id=?",[id]);
+    if(!user) return res.status(404).json({success:false,message:"Utente non trovato"});
+    const gare=await dbAllP("SELECT * FROM gare WHERE user_id=? ORDER BY data DESC,id DESC",[id]);
+    const allenamenti=await dbAllP("SELECT * FROM allenamenti WHERE user_id=? ORDER BY data DESC,id DESC",[id]);
+    res.json({success:true,user,gare,allenamenti});
+});
+app.post("/api/admin/users/:id/verify", requireAdmin, (req,res)=>{
+    db.run("UPDATE users SET email_verified=1, verification_token=NULL WHERE id=?",[Number(req.params.id)],err=>err?res.status(500).json({success:false,message:"Errore"}):res.json({success:true}));
+});
+app.post("/api/admin/users/:id/block", requireAdmin, (req,res)=>{
+    const id=Number(req.params.id); if(id===1) return res.status(400).json({success:false,message:"Admin originale protetto"});
+    db.run("UPDATE users SET blocked=1 WHERE id=?",[id],err=>err?res.status(500).json({success:false}):res.json({success:true}));
+});
+app.post("/api/admin/users/:id/unblock", requireAdmin, (req,res)=>{
+    db.run("UPDATE users SET blocked=0 WHERE id=?",[Number(req.params.id)],err=>err?res.status(500).json({success:false}):res.json({success:true}));
+});
+app.post("/api/admin/users/:id/role", requireAdmin, (req,res)=>{
+    const id=Number(req.params.id); if(id===1) return res.status(400).json({success:false,message:"Admin originale protetto"});
+    const role=String(req.body.role||"user")==="admin"?"admin":"user";
+    db.run("UPDATE users SET role=? WHERE id=?",[role,id],err=>err?res.status(500).json({success:false}):res.json({success:true}));
+});
+app.delete("/api/admin/users/:id", requireAdmin, (req,res)=>{
+    const id=Number(req.params.id); if(id===1) return res.status(400).json({success:false,message:"Admin originale protetto"});
+    db.run("DELETE FROM score_entries WHERE gara_id IN (SELECT id FROM gare WHERE user_id=?)",[id],()=>{
+        db.run("DELETE FROM allenamento_score_entries WHERE allenamento_id IN (SELECT id FROM allenamenti WHERE user_id=?)",[id],()=>{
+            db.run("DELETE FROM gare WHERE user_id=?",[id],()=>{
+                db.run("DELETE FROM allenamenti WHERE user_id=?",[id],()=>{
+                    db.run("DELETE FROM sessions WHERE user_id=?",[id],()=>{
+                        db.run("DELETE FROM password_resets WHERE user_id=?",[id],()=>{
+                            db.run("DELETE FROM users WHERE id=?",[id],err=>err?res.status(500).json({success:false,message:"Errore eliminazione"}):res.json({success:true}));
+                        });
+                    });
+                });
+            });
+        });
+    });
+});
+app.post("/api/admin/change-password", requireAdmin, (req,res)=>{
+    const currentPassword=String(req.body.currentPassword||"");
+    const newPassword=String(req.body.newPassword||"");
+    if(newPassword.length<6) return res.status(400).json({success:false,message:"Nuova password troppo corta"});
+    db.get("SELECT * FROM users WHERE id=?",[req.user.id],(err,user)=>{
+        if(err || !user || !verifyPassword(currentPassword,user.password_hash)) return res.status(400).json({success:false,message:"Password attuale non corretta"});
+        db.run("UPDATE users SET password_hash=? WHERE id=?",[hashPassword(newPassword),req.user.id],err=>err?res.status(500).json({success:false}):res.json({success:true,message:"Password aggiornata"}));
+    });
+});
+app.post("/api/admin/users/:id/reset-password", requireAdmin, (req,res)=>{
+    return res.json({success:true,message:"Reset email non attivo fino alla configurazione del dominio. Usa cambio password/admin manuale."});
+});
 
 app.get("/api/gare", (req,res) => {
     db.all("SELECT * FROM gare WHERE user_id = ? ORDER BY data DESC", [req.user.id], (err,rows) => {
@@ -495,10 +695,11 @@ app.get("/api/fitarco/:codice", async (req,res) => {
         await cercaGaraExcelFitarco(codice);
 
         if(!garaExcel){
-            return res.json({
-                success:false,
-                message:"Gara non trovata nel calendario Excel"
-            });
+            const garaOnline = await cercaGaraOnlineFitarco(codice);
+            if(garaOnline){
+                return res.json({success:true, fonte:garaOnline.fonte||"fitarco-online", nome:garaOnline.nome||"Gara "+codice, data:garaOnline.data||"", luogo:garaOnline.luogo||"", indirizzo:garaOnline.indirizzo||"", tipo_gara:garaOnline.tipo_gara||"Targa", distanza:garaOnline.distanza||"", all_aperto:!!garaOnline.all_aperto});
+            }
+            return res.json({ success:false, message:"Gara non trovata. Inseriscila manualmente." });
         }
 
         const garaInvito =
@@ -525,6 +726,32 @@ app.get("/api/fitarco/:codice", async (req,res) => {
         });
     }
 });
+
+
+async function cercaGaraOnlineFitarco(codice){
+    const invito = await cercaInvitoFitarco(codice);
+    if(invito && (invito.indirizzo || invito.nome || invito.luogo)) return {...invito, fonte:"fitarco-invito"};
+
+    const urls = [
+        `https://www.fitarco.it/gare-e-risultati/calendario.html`,
+        `https://www.fitarco.it/gare-e-risultati/calendario.html?codice=${encodeURIComponent(codice)}`
+    ];
+    for(const url of urls){
+        try{
+            const response = await axios.get(url,{timeout:15000,headers:{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ArcheryScore","Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8","Accept-Language":"it-IT,it;q=0.9,en;q=0.8"}});
+            const $=cheerio.load(response.data);
+            const text=$("body").text().replace(/\s+/g," ");
+            if(!text.toUpperCase().includes(codice)) continue;
+            let row="";
+            $("tr,li,.views-row,.item,div").each((_,el)=>{const t=$(el).text().replace(/\s+/g," ").trim(); if(!row && t.toUpperCase().includes(codice)) row=t;});
+            const src=row||text;
+            return {fonte:"fitarco-calendario",nome:(src.slice(0,120)||"Gara FITARCO "+codice),data:estraiDataDaTesto(src),luogo:"",indirizzo:"",tipo_gara:normalizzaTipoGaraDaRiga([src],"","",src)||"Targa",distanza:estraiDistanzaDaTesto(src),all_aperto:normalizzaStringa(src).includes("aperto")};
+        }catch(err){
+            console.error("Errore calendario FITARCO online:", err.message);
+        }
+    }
+    return null;
+}
 
 async function cercaGaraExcelFitarco(codice){
 

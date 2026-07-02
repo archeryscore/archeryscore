@@ -820,3 +820,15 @@ if(new URLSearchParams(window.location.search).get("edit")){
         }
     }, 900);
 }
+
+
+// Fix progressivi in modifica v2
+if(new URLSearchParams(window.location.search).get("edit")){
+    setTimeout(() => {
+        try{
+            document.querySelectorAll(".score-input").forEach(el=>el.dispatchEvent(new Event("input",{bubbles:true})));
+            if(typeof aggiornaProgressivi === "function") aggiornaProgressivi();
+            if(typeof aggiornaTotali === "function") aggiornaTotali();
+        }catch(e){ console.warn("Ricalcolo progressivi modifica", e); }
+    }, 1000);
+}
