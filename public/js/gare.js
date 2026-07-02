@@ -108,21 +108,37 @@ async function caricaFitarco(){
 
         if(!dati.success){
             mostraPopup("Gara non trovata: puoi inserirla manualmente", "error");
-            mostraDettagliGara();
+
+            const details = document.getElementById("garaDetails");
+            if(details) details.classList.remove("hidden");
+
+            const banner = document.getElementById("garaTypeBanner");
+            if(banner) banner.textContent = "Inserimento manuale";
+
             document.getElementById("nome").value = "Gara " + codice;
             const dataInput = document.getElementById("data");
             if(dataInput && !dataInput.value) dataInput.value = new Date().toISOString().slice(0,10);
+
+            if(tipoGaraContainer) tipoGaraContainer.style.display = "flex";
             if(tipoGara){
-                if(tipoGaraContainer) tipoGaraContainer.style.display = "flex";
                 tipoGara.value = tipoGara.value || "Targa";
                 aggiornaCampi();
             }
+
             return;
         }
 
-        document.getElementById("nome").value = dati.nome;
-        document.getElementById("data").value = dati.data;
-        document.getElementById("luogo").value = dati.luogo;
+        const details = document.getElementById("garaDetails");
+        if(details) details.classList.remove("hidden");
+
+        const banner = document.getElementById("garaTypeBanner");
+        if(banner) banner.textContent = dati.tipo_gara || "Gara FITARCO";
+
+        document.getElementById("nome").value = dati.nome || "";
+        document.getElementById("data").value = dati.data || "";
+        document.getElementById("luogo").value = dati.luogo || "";
+        const indirizzoInput = document.getElementById("indirizzo");
+        if(indirizzoInput) indirizzoInput.value = dati.indirizzo || "";
 
         tipoGara.value = dati.tipo_gara;
         aggiornaCampi();
