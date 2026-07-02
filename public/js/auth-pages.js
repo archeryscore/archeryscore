@@ -40,7 +40,7 @@ document.getElementById("registerForm")?.addEventListener("submit",async e=>{
         resend.classList.remove("hidden-auth-box");
         resend.querySelector("[name='email']").value=email;
     }
-    showMsg(j.message||"Account creato. Controlla la tua email per confermare la registrazione. Controlla anche la cartella Spam.","success");
+    showMsg((j.message||"").includes("email") && !(j.message||"").includes("dominio") ? "Account creato. Puoi accedere subito. La verifica email sarà attivata quando avremo il dominio." : (j.message||"Account creato. Puoi accedere subito."),"success");
     e.target.reset();
 });
 
@@ -57,7 +57,7 @@ document.getElementById("requestResetForm")?.addEventListener("submit",async e=>
     const f=new FormData(e.target);
     const j=await post("/api/password/request-reset",{email:f.get("email")});
     if(!j.success) return showMsg(j.message||"Richiesta non riuscita");
-    showMsg(j.message||"Se l'account esiste, riceverai una email per il reset. Controlla anche la cartella Spam.","success");
+    showMsg("Reset via email non ancora attivo: sarà disponibile quando il dominio sarà configurato. Per ora chiedi all’admin il cambio/reset manuale.","success");
 });
 
 const resetToken=qs("token");

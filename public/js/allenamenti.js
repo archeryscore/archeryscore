@@ -804,3 +804,19 @@ function mostraPopup(testo, tipo="success"){
         popup.classList.add("hidden");
     }, 3000);
 }
+
+
+// Fix caricamento modifica: ricalcola progressivi dopo il riempimento dei valori
+if(new URLSearchParams(window.location.search).get("edit")){
+    setTimeout(() => {
+        try{
+            if(typeof aggiornaScore === "function"){
+                const tipo = tipoScoreDaScelta ? tipoScoreDaScelta() : "";
+                const rule = creaRuleAllenamento ? creaRuleAllenamento() : null;
+                if(tipo && rule) aggiornaScore(tipo, rule);
+            }
+        }catch(e){
+            console.warn("Ricalcolo progressivi non riuscito", e);
+        }
+    }, 900);
+}

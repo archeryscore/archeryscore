@@ -16,6 +16,7 @@ app.use(express.json({ limit:"50mb" }));
 // AUTH MULTIUTENTE
 // =======================
 const COOKIE_NAME = "archeryscore_session";
+const EMAIL_VERIFICATION_REQUIRED = String(process.env.EMAIL_VERIFICATION_REQUIRED || "false").toLowerCase() === "true";
 
 function parseCookies(req){
     const header = req.headers.cookie || "";
@@ -203,7 +204,7 @@ app.get("/api/auth/me",(req,res)=>{
     if(!token) return res.status(401).json({ success:false, auth:false });
 
     db.get(`
-        SELECT users.id,users.username,users.email
+        SELECT users.id,users.username,users.email,users.role,users.email_verified,users.blocked
         FROM sessions
         JOIN users ON users.id = sessions.user_id
         WHERE sessions.token = ?

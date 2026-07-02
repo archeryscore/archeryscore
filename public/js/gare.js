@@ -1,143 +1,40 @@
 const tipoGara = document.getElementById("tipo_gara");
 const tipoArco = document.getElementById("tipo_arco");
 const distanza = document.getElementById("distanza");
-const indirizzo =document.getElementById("indirizzo");
 const distanceContainer = document.getElementById("distanceContainer");
 const btnFitarco = document.getElementById("btnFitarco");
 const tipoGaraContainer = document.getElementById("tipoGaraContainer");
 const scoreContainer = document.getElementById("scoreContainer");
 const keyboardLegend = document.getElementById("keyboardLegend");
 const generaScoreBtn = document.getElementById("generaScore");
-const garaDetails = document.getElementById("garaDetails");
-const garaTypeBanner = document.getElementById("garaTypeBanner");
-const pageTitle = document.getElementById("pageTitle");
-
-const params = new URLSearchParams(window.location.search);
-const editId = params.get("edit");
-
-let modalitaModifica = Boolean(editId);
-let targaAllApertoFitarco = false;
-let distanzaAllApertoFitarco = "";
+const generaScoreBtn = document.getElementById("generaScore");
 
 const archi = {
-    "Indoor 18m":["Olimpico","Compound","Arco Nudo","Longbow"],
-    "Indoor 25m":["Olimpico","Compound","Arco Nudo","Longbow"],
-    "Indoor 18+25":["Olimpico","Compound","Arco Nudo","Longbow"],
-    "Indoor all-aperto 😉":["Olimpico","Compound","Arco Nudo","Longbow"],
-    "Targa":["Olimpico","Compound","Arco Nudo","Longbow"],
-    "Targa all-aperto":["Olimpico","Compound","Arco Nudo","Longbow"],
-    "Targa 18m":["Olimpico","Compound","Arco Nudo","Longbow"],
-    "Targa 25m":["Olimpico","Compound","Arco Nudo","Longbow"],
-    "Targa 18+25m":["Olimpico","Compound","Arco Nudo","Longbow"],
-    "Doppio Targa":["Olimpico","Compound","Arco Nudo","Longbow"],
-    "Campagna/H&F 12+12":["Olimpico","Compound","Arco Nudo","Longbow"],
-    "Campagna/H&F 24+24":["Olimpico","Compound","Arco Nudo","Longbow"],
-    "3D 24":["Compound","Arco Nudo","Longbow","Istintivo"],
-    "3D 48":["Compound","Arco Nudo","Longbow","Istintivo"]
+    "Indoor 18m": ["Olimpico", "Compound", "Arco Nudo", "Longbow"],
+    "Indoor 25m": ["Olimpico", "Compound", "Arco Nudo", "Longbow"],
+    "Indoor 18+25": ["Olimpico", "Compound", "Arco Nudo", "Longbow"],
+
+    "Targa": ["Olimpico", "Compound", "Arco Nudo", "Longbow"],
+    "Doppio Targa": ["Olimpico", "Compound", "Arco Nudo", "Longbow"],
+
+    "Campagna/H&F 12+12": ["Olimpico", "Compound", "Arco Nudo", "Longbow"],
+    "Campagna/H&F 24+24": ["Olimpico", "Compound", "Arco Nudo", "Longbow"],
+
+    "3D 24": ["Compound", "Arco Nudo", "Longbow", "Istintivo"],
+    "3D 48": ["Compound", "Arco Nudo", "Longbow", "Istintivo"]
 };
 
+tipoGara.addEventListener("change", aggiornaCampi);
+tipoArco.addEventListener("change", aggiornaDistanze);
+btnFitarco.addEventListener("click", caricaFitarco);
+generaScoreBtn.addEventListener("click", generaScore);
 
-garantisciRegoleTargaOutdoor();
-
-function garantisciRegoleTargaOutdoor(){
-    if(typeof RULES === "undefined") return;
-
-    if(!RULES["Targa 18m"]){
-        RULES["Targa 18m"] = {
-            series:2,
-            volleysPerSeries:10,
-            arrowsPerVolley:3,
-            distances:[18,18],
-            allowed:["M","1","2","3","4","5","6","7","8","9","10"],
-            shortcuts:{ "+":"10" }
-        };
-    }
-
-    if(!RULES["Targa 25m"]){
-        RULES["Targa 25m"] = {
-            series:2,
-            volleysPerSeries:10,
-            arrowsPerVolley:3,
-            distances:[25,25],
-            allowed:["M","1","2","3","4","5","6","7","8","9","10"],
-            shortcuts:{ "+":"10" }
-        };
-    }
-
-    if(!RULES["Targa 18+25m"]){
-        RULES["Targa 18+25m"] = {
-            series:4,
-            volleysPerSeries:10,
-            arrowsPerVolley:3,
-            distances:[18,18,25,25],
-            allowed:["M","1","2","3","4","5","6","7","8","9","10"],
-            shortcuts:{ "+":"10" }
-        };
-    }
-}
-
-
-
-tipoGara?.addEventListener("change", () => {
-    aggiornaCampi();
-    mostraTipoGaraBanner(tipoGara.value);
-});
-
-tipoArco?.addEventListener("change", aggiornaDistanze);
-btnFitarco?.addEventListener("click", caricaFitarco);
-generaScoreBtn?.addEventListener("click", generaScore);
-
-inizializzaPagina();
-
-function inizializzaPagina(){
-    aggiornaCampi();
-
-    if(editId){
-        mostraDettagliGara();
-        caricaGaraDaModificare(editId);
-    }else{
-        nascondiDettagliGara();
-    }
-}
-
-function mostraDettagliGara(){
-    garaDetails?.classList.remove("hidden");
-}
-
-function nascondiDettagliGara(){
-    garaDetails?.classList.add("hidden");
-    scoreContainer.innerHTML = "";
-    keyboardLegend.classList.add("hidden");
-    keyboardLegend.innerHTML = "";
-}
-
-
-function garantisciOpzioneTipoGara(tipo){
-    if(!tipoGara || !tipo){
-        return;
-    }
-
-    const esiste =
-    Array.from(tipoGara.options).some(opt => opt.value === tipo);
-
-    if(esiste){
-        return;
-    }
-
-    const opt =
-    document.createElement("option");
-
-    opt.value =
-    tipo;
-
-    opt.textContent =
-    tipo;
-
-    tipoGara.appendChild(opt);
+aggiornaCampi();
+if(editId){
+    caricaGaraDaModificare(editId);
 }
 
 function aggiornaCampi(){
-    if(!tipoArco || !tipoGara) return;
 
     tipoArco.innerHTML = "";
 
@@ -160,17 +57,13 @@ function aggiornaCampi(){
 
 function aggiornaDistanze(){
 
-    if(!distanza || !distanceContainer || !tipoGara || !tipoArco){
-        return;
-    }
-
     distanza.innerHTML = "";
 
     const gara = tipoGara.value;
     const arco = tipoArco.value;
 
     if(
-        (gara.includes("Indoor") && gara !== "Indoor all-aperto 😉") ||
+        gara.includes("Indoor") ||
         gara.includes("3D") ||
         gara.includes("Campagna")
     ){
@@ -182,15 +75,10 @@ function aggiornaDistanze(){
 
     let distanze = [];
 
-    if(gara === "Indoor all-aperto 😉"){
-        distanze = distanzaAllApertoFitarco
-            ? [distanzaAllApertoFitarco]
-            : ["18","25","18+25"];
+    if(arco === "Olimpico"){
+        distanze = [18, 25, 30, 40, 60, 70];
     }else{
-        distanze =
-            arco === "Olimpico"
-                ? ["20","30","40","50","60","70"]
-                : ["20","30","40","50"];
+        distanze = [18, 25, 30, 40, 50];
     }
 
     distanze.forEach(d => {
@@ -199,26 +87,15 @@ function aggiornaDistanze(){
         opt.textContent = d + " m";
         distanza.appendChild(opt);
     });
-
-    if(distanze.length === 1){
-        distanza.value = distanze[0];
-    }
-}
-
-function aggiungiDistanzaFissa(valore){
-    const opt = document.createElement("option");
-    opt.value = valore;
-    opt.textContent = valore + " m";
-    distanza.appendChild(opt);
-    distanza.value = valore;
 }
 
 async function caricaFitarco(){
-    return caricaFitarcoAsync();
-}
 
-async function caricaFitarcoAsync(){
-    const codice = document.getElementById("codice_gara").value.trim().toUpperCase();
+    const codice = document
+        .getElementById("codice_gara")
+        .value
+        .trim()
+        .toUpperCase();
 
     if(!codice){
         mostraPopup("Inserisci un codice gara", "error");
@@ -226,58 +103,34 @@ async function caricaFitarcoAsync(){
     }
 
     try{
+
         const res = await fetch("/api/fitarco/" + codice);
         const dati = await res.json();
 
         if(!dati.success){
-            mostraPopup("Gara non trovata", "error");
+            mostraPopup("Gara non trovata: puoi inserirla manualmente", "error");
+            mostraDettagliGara();
+            document.getElementById("nome").value = "Gara " + codice;
+            const dataInput = document.getElementById("data");
+            if(dataInput && !dataInput.value) dataInput.value = new Date().toISOString().slice(0,10);
+            if(tipoGara){
+                if(tipoGaraContainer) tipoGaraContainer.style.display = "flex";
+                tipoGara.value = tipoGara.value || "Targa";
+                aggiornaCampi();
+            }
             return;
         }
 
-        document.getElementById("nome").value = dati.nome || "";
-        document.getElementById("data").value = dati.data || "";
-        document.getElementById("luogo").value = dati.luogo || "";
+        document.getElementById("nome").value = dati.nome;
+        document.getElementById("data").value = dati.data;
+        document.getElementById("luogo").value = dati.luogo;
 
-        if(indirizzo){
-            indirizzo.value = dati.indirizzo || "";
-        }
-
-        const tipoCorretto =
-        normalizzaTipoGaraFrontend(dati.tipo_gara, dati.distanza, dati);
-
-        const tipoDaUsare =
-        tipoCorretto && archi[tipoCorretto]
-            ? tipoCorretto
-            : "Targa";
-
-        garantisciOpzioneTipoGara(tipoDaUsare);
-
-        tipoGara.value =
-        tipoDaUsare;
-
-        targaAllApertoFitarco =
-        tipoGara.value === "Indoor all'aperto 😉";
-
-        distanzaAllApertoFitarco =
-        targaAllApertoFitarco
-            ? normalizzaDistanzaIndoorAperto(dati.distanza, dati.nome, dati.tipo_gara)
-            : "";
-
+        tipoGara.value = dati.tipo_gara;
         aggiornaCampi();
 
-        if(distanza){
-            if(distanzaAllApertoFitarco){
-                distanza.value = distanzaAllApertoFitarco;
-            }else if(dati.distanza){
-                distanza.value = dati.distanza === "25+18" ? "18+25" : dati.distanza;
-            }
-        }
+        gestisciCampiDaFitarco(dati.tipo_gara);
 
-        gestisciCampiDaFitarco(tipoGara.value);
-        mostraTipoGaraBanner(tipoGara.value);
-        mostraDettagliGara();
-
-        mostraPopup("Gara caricata", "success");
+        mostraPopup("Gara caricata da FITARCO", "success");
 
     }catch(err){
         console.error(err);
@@ -286,57 +139,54 @@ async function caricaFitarcoAsync(){
 }
 
 function gestisciCampiDaFitarco(tipo){
+
     if(tipoGaraContainer){
         tipoGaraContainer.style.display = "none";
     }
 
-    if(tipo === "Targa" || tipo === "Indoor all'aperto 😉" || tipo === "Doppio Targa"){
+    if(tipo === "Targa" || tipo === "Doppio Targa"){
         distanceContainer.style.display = "flex";
     }else{
         distanceContainer.style.display = "none";
     }
 }
 
-function mostraTipoGaraBanner(tipo){
-    if(!garaTypeBanner) return;
+function mostraPopup(testo, tipo = "success"){
 
-    if(!tipo){
-        garaTypeBanner.textContent = "Tipo gara non riconosciuto";
-        garaTypeBanner.className = "gara-type-banner banner-unknown";
-        return;
+    const popup = document.getElementById("popup");
+    const popupText = document.getElementById("popupText");
+    const popupIcon = document.getElementById("popupIcon");
+
+    popupText.textContent = testo;
+
+    popup.classList.remove(
+        "hidden",
+        "popup-success",
+        "popup-error"
+    );
+
+    if(tipo === "success"){
+        popup.classList.add("popup-success");
+        popupIcon.textContent = "✅";
+    }else{
+        popup.classList.add("popup-error");
+        popupIcon.textContent = "❌";
     }
 
-    let testo = tipo;
-
-    if(tipo === "Targa") testo = "Targa";
-
-    if(tipo === "Indoor all'aperto 😉"){
-        const d = distanza?.value || distanzaAllApertoFitarco || "";
-        testo = d ? `Indoor all'aperto 😉 ${d} metri` : "Indoor all'aperto 😉";
-    }
-
-    if(tipo === "3D 24") testo = "3D 24 piazzole";
-    if(tipo === "3D 48") testo = "3D 48 piazzole";
-    if(tipo === "Campagna/H&F 12+12") testo = "Campagna/H&F 12+12 - 24 piazzole";
-    if(tipo === "Campagna/H&F 24+24") testo = "Campagna/H&F 24+24 - 48 piazzole";
-    if(tipo === "Indoor 18m") testo = "Indoor 18 metri";
-    if(tipo === "Indoor 25m") testo = "Indoor 25 metri";
-    if(tipo === "Indoor 18+25") testo = "Indoor 18+25 metri";
-
-    garaTypeBanner.textContent = testo;
-    garaTypeBanner.className = "gara-type-banner banner-" + slug(tipo);
+    setTimeout(() => {
+        popup.classList.add("hidden");
+    }, 3000);
 }
-
 function generaScore(){
+
     const tipo = tipoGara.value;
-    const tipoScore = tipoScoreDaScelta();
 
     if(!tipo){
         mostraPopup("Seleziona un tipo gara", "error");
         return;
     }
 
-    const rule = RULES[tipoScore];
+    const rule = RULES[tipo];
 
     if(!rule){
         mostraPopup("Regole gara non trovate", "error");
@@ -346,40 +196,47 @@ function generaScore(){
     scoreContainer.innerHTML = "";
     keyboardLegend.innerHTML = "";
 
-    mostraTipoGaraBanner(tipo);
-    generaLegenda(tipoScore, rule);
+    generaLegenda(tipo, rule);
 
     if(rule.targets){
-        generaPercorso(tipoScore, rule);
+        generaPercorso(tipo, rule);
     }else{
-        generaBersaglio(tipoScore, rule);
+        generaBersaglio(tipo, rule);
     }
 
-    keyboardLegend.classList.remove("hidden");
-
-    attivaScore(tipoScore, rule);
-    aggiornaScore(tipoScore, rule);
+    attivaScore(tipo, rule);
+    aggiornaScore(tipo, rule);
 }
 
 function generaLegenda(tipo, rule){
+
     let html = `
-        <div class="legend-title">Scorciatoie Tastiera</div>
+        <div class="legend-title">
+            Scorciatoie Tastiera
+        </div>
+
         <div class="legend-row">
     `;
 
     if(rule.shortcuts){
         Object.keys(rule.shortcuts).forEach(key => {
-            html += `<div class="legend-key">${key} → ${rule.shortcuts[key]}</div>`;
+            html += `
+                <div class="legend-key">
+                    ${key} → ${rule.shortcuts[key]}
+                </div>
+            `;
         });
     }
 
-    if(rule.allowed && rule.allowed.includes("X")){
-        html += `<div class="legend-key">X → X</div>`;
+    if(tipo.includes("Targa")){
+        html += `
+            <div class="legend-key">X → X</div>
+        `;
     }
 
     html += `
-        <div class="legend-key">M → Miss</div>
-        <div class="legend-key">valore valido → prossima casella</div>
+            <div class="legend-key">M → Miss</div>
+            <div class="legend-key">Invio/valore valido → prossima casella</div>
         </div>
     `;
 
@@ -387,28 +244,36 @@ function generaLegenda(tipo, rule){
 }
 
 function generaBersaglio(tipo, rule){
-    const labels = getSpecialLabels(tipo);
-    let html = `<div class="score-grid">`;
+
+    let html = `
+        <div class="score-grid">
+    `;
 
     for(let s = 1; s <= rule.series; s++){
-        const labelDistanza = rule.distances && rule.distances[s - 1]
-            ? ` - ${rule.distances[s - 1]}m`
-            : "";
 
-        const columns =
-            `52px repeat(${rule.arrowsPerVolley}, minmax(34px, 1fr)) 52px 58px 60px 60px`;
+        const labelDistanza =
+            rule.distances && rule.distances[s - 1]
+                ? ` - ${rule.distances[s - 1]}m`
+                : "";
 
         html += `
             <div class="score-card">
-                <h2>Serie ${s}${labelDistanza}</h2>
 
-                <div class="score-header" style="grid-template-columns:${columns};">
+                <h2>
+                    Serie ${s}${labelDistanza}
+                </h2>
+
+                <div class="score-header"
+                     style="grid-template-columns: 60px repeat(${rule.arrowsPerVolley}, 54px) 65px 65px 70px 70px;">
+
                     <div>Vol</div>
         `;
 
         for(let a = 1; a <= rule.arrowsPerVolley; a++){
             html += `<div>F${a}</div>`;
         }
+
+        const labels = getSpecialLabels(tipo);
 
         html += `
                     <div>Tot</div>
@@ -419,12 +284,12 @@ function generaBersaglio(tipo, rule){
         `;
 
         for(let v = 1; v <= rule.volleysPerSeries; v++){
+
             html += `
-                <div
-                    class="volley-row score-row"
-                    data-serie="${s}"
-                    data-volley="${v}"
-                    style="grid-template-columns:${columns};">
+                <div class="volley-row score-row"
+                     data-serie="${s}"
+                     data-volley="${v}"
+                     style="grid-template-columns: 60px repeat(${rule.arrowsPerVolley}, 54px) 65px 65px 70px 70px;">
 
                     <span>V${v}</span>
             `;
@@ -450,17 +315,19 @@ function generaBersaglio(tipo, rule){
         }
 
         html += `
-            <div class="series-summary" data-serie-summary="${s}">
-                <span>Totale serie: <strong class="serie-total">0</strong></span>
-                <span>${labels[0]}: <strong class="serie-special-a">0</strong></span>
-                <span>${labels[1]}: <strong class="serie-special-b">0</strong></span>
+                <div class="series-summary" data-serie-summary="${s}">
+                    Totale serie: <strong class="serie-total">0</strong>
+                    <span>${labels[0]}: <strong class="serie-special-a">0</strong></span>
+                    <span>${labels[1]}: <strong class="serie-special-b">0</strong></span>
+                </div>
+
             </div>
-        </div>
         `;
     }
 
     html += `
         </div>
+
         <div id="summaryContainer" class="summary-card"></div>
     `;
 
@@ -468,89 +335,91 @@ function generaBersaglio(tipo, rule){
 }
 
 function generaPercorso(tipo, rule){
+
     const labels = getSpecialLabels(tipo);
 
-    const columns = tipo.includes("Campagna")
-        ? `90px repeat(3, minmax(34px, 1fr)) 52px 58px 52px 52px`
-        : `90px repeat(2, minmax(34px, 1fr)) 52px 58px 58px 58px`;
+    let html = `
+        <div class="score-grid one-column">
 
-    const meta = Math.ceil(rule.targets / 2);
-
-    let html = `<div class="score-grid">`;
-
-    for(let gruppo = 0; gruppo < 2; gruppo++){
-        const start = gruppo === 0 ? 1 : meta + 1;
-        const end = gruppo === 0 ? meta : rule.targets;
-
-        html += `
             <div class="score-card">
-                <h2>${tipo.includes("3D") ? "3D" : "H&F"} - Piazzole ${start}-${end}</h2>
 
-                <div class="score-header" style="grid-template-columns:${columns};">
+                <h2>${tipo}</h2>
+
+                <div class="score-header"
+                     style="grid-template-columns: 95px repeat(${rule.arrowsPerTarget}, 54px) 65px 65px 70px 70px;">
+
                     <div>Piazzola</div>
-        `;
+    `;
 
-        for(let a = 1; a <= rule.arrowsPerTarget; a++){
-            html += `<div>F${a}</div>`;
-        }
+    for(let a = 1; a <= rule.arrowsPerTarget; a++){
+        html += `<div>F${a}</div>`;
+    }
 
-        html += `
+    html += `
                     <div>Tot</div>
                     <div>Prog</div>
                     <div>${labels[0]}</div>
                     <div>${labels[1]}</div>
                 </div>
+    `;
+
+    for(let p = 1; p <= rule.targets; p++){
+
+        html += `
+            <div class="volley-row score-row"
+                 data-target="${p}"
+                 style="grid-template-columns: 95px repeat(${rule.arrowsPerTarget}, 54px) 65px 65px 70px 70px;">
+
+                <span>P${p}</span>
         `;
 
-        for(let p = start; p <= end; p++){
+        for(let a = 1; a <= rule.arrowsPerTarget; a++){
             html += `
-                <div
-                    class="volley-row score-row"
+                <input
+                    class="arrow-input"
+                    maxlength="2"
                     data-target="${p}"
-                    style="grid-template-columns:${columns};">
-
-                    <span>P${p}</span>
-            `;
-
-            for(let a = 1; a <= rule.arrowsPerTarget; a++){
-                html += `
-                    <input
-                        class="arrow-input"
-                        maxlength="2"
-                        data-target="${p}"
-                        data-arrow="${a}">
-                `;
-            }
-
-            html += `
-                    <div class="volley-total">0</div>
-                    <div class="volley-progressive">0</div>
-                    <div class="volley-special special-a">0</div>
-                    <div class="volley-special special-b">0</div>
-                </div>
+                    data-arrow="${a}">
             `;
         }
 
-        html += `</div>`;
+        html += `
+                <div class="volley-total">0</div>
+                <div class="volley-progressive">0</div>
+                <div class="volley-special special-a">0</div>
+                <div class="volley-special special-b">0</div>
+            </div>
+        `;
     }
 
     html += `
+            </div>
         </div>
+
         <div id="summaryContainer" class="summary-card"></div>
     `;
 
     scoreContainer.innerHTML = html;
 }
 function attivaScore(tipo, rule){
+
     const inputs = document.querySelectorAll(".arrow-input");
 
     inputs.forEach((input, index) => {
+
         input.addEventListener("input", () => {
+
             formatInput(input, tipo, rule, inputs, index);
             aggiornaScore(tipo, rule);
+
         });
 
         input.addEventListener("keydown", event => {
+
+            if(event.key === "Backspace" || event.key === "Delete"){
+                return;
+            }
+
             if(event.key === "ArrowRight"){
                 event.preventDefault();
                 focusNext(inputs, index);
@@ -565,11 +434,13 @@ function attivaScore(tipo, rule){
 }
 
 function formatInput(input, tipo, rule, inputs, index){
+
     let value = input.value.trim().toUpperCase();
 
-    input.className = "arrow-input";
-
-    if(!value) return;
+    if(!value){
+        input.className = "arrow-input";
+        return;
+    }
 
     if(rule.shortcuts && rule.shortcuts[value]){
         value = rule.shortcuts[value];
@@ -580,6 +451,10 @@ function formatInput(input, tipo, rule, inputs, index){
         return;
     }
 
+    if(value === "M"){
+        value = "M";
+    }
+
     if(!rule.allowed.includes(value)){
         input.value = "";
         return;
@@ -588,6 +463,7 @@ function formatInput(input, tipo, rule, inputs, index){
     input.value = value;
 
     applicaColore(input, value, tipo);
+
     focusNext(inputs, index);
 }
 
@@ -606,17 +482,19 @@ function focusPrev(inputs, index){
 }
 
 function aggiornaScore(tipo, rule){
+
     const rows = document.querySelectorAll(".score-row");
 
     let totaleGara = 0;
     let frecceCompilate = 0;
-    let righeComplete = 0;
+    let volleeCompilate = 0;
     let specialTotA = 0;
     let specialTotB = 0;
 
     const serieData = {};
 
     rows.forEach(row => {
+
         const inputs = row.querySelectorAll(".arrow-input");
 
         let totaleRiga = 0;
@@ -625,6 +503,7 @@ function aggiornaScore(tipo, rule){
         let rigaCompleta = true;
 
         inputs.forEach(input => {
+
             const value = input.value.trim().toUpperCase();
 
             if(!value){
@@ -635,6 +514,7 @@ function aggiornaScore(tipo, rule){
             totaleRiga += scoreValue(value);
 
             const special = contaSpeciali(tipo, value);
+
             specialA += special.a;
             specialB += special.b;
 
@@ -646,7 +526,7 @@ function aggiornaScore(tipo, rule){
         specialTotB += specialB;
 
         if(rigaCompleta){
-            righeComplete++;
+            volleeCompilate++;
         }
 
         row.querySelector(".volley-total").textContent = totaleRiga;
@@ -657,9 +537,9 @@ function aggiornaScore(tipo, rule){
 
         if(!serieData[serie]){
             serieData[serie] = {
-                total:0,
-                specialA:0,
-                specialB:0
+                total: 0,
+                specialA: 0,
+                specialB: 0
             };
         }
 
@@ -672,12 +552,21 @@ function aggiornaScore(tipo, rule){
     });
 
     Object.keys(serieData).forEach(serie => {
-        const summary = document.querySelector(`[data-serie-summary="${serie}"]`);
+
+        const summary =
+            document.querySelector(
+                `[data-serie-summary="${serie}"]`
+            );
 
         if(summary){
-            summary.querySelector(".serie-total").textContent = serieData[serie].total;
-            summary.querySelector(".serie-special-a").textContent = serieData[serie].specialA;
-            summary.querySelector(".serie-special-b").textContent = serieData[serie].specialB;
+            summary.querySelector(".serie-total").textContent =
+                serieData[serie].total;
+
+            summary.querySelector(".serie-special-a").textContent =
+                serieData[serie].specialA;
+
+            summary.querySelector(".serie-special-b").textContent =
+                serieData[serie].specialB;
         }
     });
 
@@ -685,30 +574,43 @@ function aggiornaScore(tipo, rule){
         tipo,
         totaleGara,
         frecceCompilate,
-        righeComplete,
+        volleeCompilate,
         specialTotA,
         specialTotB
     );
 }
 
-function aggiornaRiepilogoFinale(tipo, totale, frecce, vollee, specialA, specialB){
-    const summary = document.getElementById("summaryContainer");
+function aggiornaRiepilogoFinale(
+    tipo,
+    totale,
+    frecce,
+    vollee,
+    specialA,
+    specialB
+){
 
-    if(!summary) return;
+    const summary =
+        document.getElementById("summaryContainer");
+		summary.dataset.totale = totale;
+		summary.dataset.specialA = specialA;
+		summary.dataset.specialB = specialB;
 
-    summary.dataset.totale = String(totale);
-    summary.dataset.specialA = String(specialA);
-    summary.dataset.specialB = String(specialB);
+    if(!summary){
+        return;
+		
+    }
 
     const labels = getSpecialLabels(tipo);
 
-    const mediaFreccia = frecce > 0
-        ? (totale / frecce).toFixed(2)
-        : "0.00";
+    const mediaFreccia =
+        frecce > 0
+            ? (totale / frecce).toFixed(2)
+            : "0.00";
 
-    const mediaVolee = vollee > 0
-        ? (totale / vollee).toFixed(2)
-        : "0.00";
+    const mediaVolee =
+        vollee > 0
+            ? (totale / vollee).toFixed(2)
+            : "0.00";
 
     summary.innerHTML = `
         <h2>Riepilogo Gara</h2>
@@ -742,82 +644,171 @@ function aggiornaRiepilogoFinale(tipo, totale, frecce, vollee, specialA, special
 
         </div>
     `;
-
-    aggiungiPulsanteSalva();
+	aggiungiPulsanteSalva();
 }
 
 function scoreValue(value){
-    if(value === "M" || !value) return 0;
-    if(value === "X") return 10;
+
+    if(value === "M"){
+        return 0;
+    }
+
+    if(value === "X"){
+        return 10;
+    }
+
     return Number(value);
 }
 
 function contaSpeciali(tipo, value){
-    if(isTargaOutdoor(tipo)){
-        return { a: value === "10" ? 1 : 0, b: value === "9" ? 1 : 0 };
-    }
+
     if(tipo.includes("Targa")){
-        return { a: value === "X" || value === "10" ? 1 : 0, b: value === "X" ? 1 : 0 };
+
+        return {
+            a: value === "X" || value === "10" ? 1 : 0,
+            b: value === "X" ? 1 : 0
+        };
     }
+
     if(tipo.includes("Indoor")){
-        return { a: value === "10" ? 1 : 0, b: value === "9" ? 1 : 0 };
+
+        return {
+            a: value === "10" ? 1 : 0,
+            b: value === "9" ? 1 : 0
+        };
     }
+
     if(tipo.includes("3D")){
-        return { a: value === "11" ? 1 : 0, b: value === "10" ? 1 : 0 };
+
+        return {
+            a: value === "11" ? 1 : 0,
+            b: value === "10" ? 1 : 0
+        };
     }
+
     if(tipo.includes("Campagna")){
-        return { a: value === "6" ? 1 : 0, b: value === "5" ? 1 : 0 };
+
+        return {
+            a: value === "6" ? 1 : 0,
+            b: value === "5" ? 1 : 0
+        };
     }
-    return { a:0, b:0 };
+
+    return {
+        a: 0,
+        b: 0
+    };
 }
 
 function getSpecialLabels(tipo){
-    if(isTargaOutdoor(tipo)) return ["10","9"];
-    if(tipo.includes("Targa")) return ["X+10","X"];
-    if(tipo.includes("Indoor")) return ["10","9"];
-    if(tipo.includes("3D")) return ["11","10"];
-    if(tipo.includes("Campagna")) return ["6","5"];
-    return ["Max 1","Max 2"];
+
+    if(tipo.includes("Targa")){
+        return ["X+10", "X"];
+    }
+
+    if(tipo.includes("Indoor")){
+        return ["10", "9"];
+    }
+
+    if(tipo.includes("3D")){
+        return ["11", "10"];
+    }
+
+    if(tipo.includes("Campagna")){
+        return ["6", "5"];
+    }
+
+    return ["Max 1", "Max 2"];
 }
 
 function applicaColore(input, value, tipo){
+
     input.className = "arrow-input";
 
     if(tipo.includes("3D")){
-        if(value === "11") input.classList.add("green-score");
-        else if(value === "10") input.classList.add("yellow-score");
-        else if(value === "8") input.classList.add("red-score");
-        else if(value === "5") input.classList.add("blue-score");
-        else input.classList.add("white-score");
+
+        if(value === "11"){
+            input.classList.add("green-score");
+        }
+
+        else if(value === "10"){
+            input.classList.add("yellow-score");
+        }
+
+        else if(value === "8"){
+            input.classList.add("red-score");
+        }
+
+        else if(value === "5"){
+            input.classList.add("blue-score");
+        }
+
+        else if(value === "M"){
+            input.classList.add("white-score");
+        }
 
         return;
     }
 
     if(tipo.includes("Campagna")){
-        if(value === "6" || value === "5") input.classList.add("yellow-score");
-        else if(["4","3","2","1"].includes(value)) input.classList.add("black-score");
-        else input.classList.add("white-score");
+
+        if(value === "6" || value === "5"){
+            input.classList.add("yellow-score");
+        }
+
+        else if(["4", "3", "2", "1"].includes(value)){
+            input.classList.add("black-score");
+        }
+
+        else if(value === "M"){
+            input.classList.add("white-score");
+        }
 
         return;
     }
 
-    if(["X","10","9"].includes(value)) input.classList.add("yellow-score");
-    else if(["8","7"].includes(value)) input.classList.add("red-score");
-    else if(["6","5"].includes(value)) input.classList.add("blue-score");
-    else if(["4","3"].includes(value)) input.classList.add("black-score");
-    else input.classList.add("white-score");
+    if(["X", "10", "9"].includes(value)){
+        input.classList.add("yellow-score");
+    }
+
+    else if(["8", "7"].includes(value)){
+        input.classList.add("red-score");
+    }
+
+    else if(["6", "5"].includes(value)){
+        input.classList.add("blue-score");
+    }
+
+    else if(["4", "3"].includes(value)){
+        input.classList.add("black-score");
+    }
+
+    else if(["2", "1", "M"].includes(value)){
+        input.classList.add("white-score");
+    }
 }
 
 function creaDatiScore(){
-    const inputs = document.querySelectorAll(".arrow-input");
+
+    const inputs =
+        document.querySelectorAll(".arrow-input");
+
     const score = [];
 
     inputs.forEach(input => {
         score.push({
-            serie: input.dataset.serie || input.dataset.target || 1,
-            volee: input.dataset.volley || input.dataset.target || 1,
-            freccia: input.dataset.arrow,
-            valore: input.value.trim().toUpperCase()
+            serie:
+                input.dataset.serie ||
+                input.dataset.target ||
+                1,
+            volee:
+                input.dataset.volley ||
+                input.dataset.target ||
+                1,
+            freccia:
+                input.dataset.arrow,
+            valore:
+                input.value.trim().toUpperCase()
         });
     });
 
@@ -825,6 +816,7 @@ function creaDatiScore(){
 }
 
 function aggiungiPulsanteSalva(){
+
     if(document.getElementById("salvaGara")){
         return;
     }
@@ -833,8 +825,8 @@ function aggiungiPulsanteSalva(){
 
     btn.type = "button";
     btn.id = "salvaGara";
-    btn.className = "generate-btn save-btn";
-    btn.textContent = modalitaModifica ? "Salva Modifiche" : "Salva Gara";
+    btn.className = "generate-btn";
+    btn.textContent = "Salva Gara";
 
     btn.addEventListener("click", salvaGara);
 
@@ -842,50 +834,104 @@ function aggiungiPulsanteSalva(){
 }
 
 async function salvaGara(){
-    const tipo = tipoScoreDaScelta();
-    const summary = document.getElementById("summaryContainer");
+
+    const tipo = tipoGara.value;
+
+    const summary =
+        document.getElementById("summaryContainer");
 
     if(!summary){
         mostraPopup("Genera prima lo score", "error");
         return;
     }
 
-    const totale = Number(summary.dataset.totale || 0);
-    const specialA = Number(summary.dataset.specialA || 0);
-    const specialB = Number(summary.dataset.specialB || 0);
+    const totale =
+        Number(
+            summary.dataset.totale || 0
+        );
+
+    const specialA =
+        Number(
+            summary.dataset.specialA || 0
+        );
+
+    const specialB =
+        Number(
+            summary.dataset.specialB || 0
+        );
+
+    const score = creaDatiScore();
 
     const gara = {
-    codice_gara: document.getElementById("codice_gara").value.trim().toUpperCase(),
-    nome: document.getElementById("nome").value,
-    data: document.getElementById("data").value,
-    luogo: document.getElementById("luogo").value,
-    indirizzo: indirizzo ? indirizzo.value.trim() : "",
-    lat:null,
-    lng:null,
+        codice_gara:
+            document
+            .getElementById("codice_gara")
+            .value
+            .trim()
+            .toUpperCase(),
+
+        nome:
+            document.getElementById("nome").value,
+
+        data:
+            document.getElementById("data").value,
+
+        luogo:
+            document.getElementById("luogo").value,
+
+        lat:null,
+        lng:null,
+
         tipo_gara: tipo,
-        tipo_arco: tipoArco.value,
-        distanza: distanzaSalvataggio(tipo),
+
+        tipo_arco:
+            tipoArco.value,
+
+        distanza:
+            distanceContainer.style.display === "none"
+                ? null
+                : distanza.value,
+
         punteggio: totale,
-        x_count: tipo.includes("Targa") && !isTargaOutdoor(tipo) ? specialB : 0,
-        ten_count: tipo.includes("3D")
-            ? specialB
-            : (tipo.includes("Targa") || tipo.includes("Indoor"))
+
+        x_count:
+            tipo.includes("Targa")
+                ? specialB
+                : 0,
+
+        ten_count:
+            tipo.includes("3D")
+                ? specialB
+                : tipo.includes("Targa")
+                    ? specialA
+                    : tipo.includes("Indoor")
+                        ? specialA
+                        : 0,
+
+        eleven_count:
+            tipo.includes("3D")
                 ? specialA
                 : 0,
-        eleven_count: tipo.includes("3D") ? specialA : 0,
-        nine_count: (tipo.includes("Indoor") || isTargaOutdoor(tipo)) ? specialB : 0,
-        five_count: tipo.includes("Campagna") ? specialB : 0,
-        miss_count: tipo.includes("Campagna") ? specialB : 0,
-        score: creaDatiScore()
+
+        miss_count: 0,
+
+        score
     };
 
     try{
-        const url = modalitaModifica ? `/api/gare/${editId}` : "/api/gare";
-        const method = modalitaModifica ? "PUT" : "POST";
+        const url = modalitaModifica
+    ? `/api/gare/${editId}`
+    : "/api/gare";
 
-        const res = await fetch(url, {
-            method,
-            headers:{ "Content-Type":"application/json" },
+const method = modalitaModifica
+    ? "PUT"
+    : "POST";
+
+const res = await fetch(url, {
+    method: method,
+            headers:{
+                "Content-Type":"application/json"
+            },
             body:JSON.stringify(gara)
         });
 
@@ -897,21 +943,25 @@ async function salvaGara(){
         }
 
         mostraPopup(
-            modalitaModifica ? "Gara modificata" : "Gara salvata",
-            "success"
-        );
+    modalitaModifica
+        ? "Gara modificata correttamente"
+        : "Gara salvata correttamente",
+    "success"
+);
 
-        setTimeout(() => {
-            window.location.href = "/";
-        }, 1200);
+setTimeout(() => {
+
+    window.location.href = "/";
+
+}, 1500);
 
     }catch(err){
         console.error(err);
         mostraPopup("Errore salvataggio gara", "error");
     }
 }
-
 async function caricaGaraDaModificare(id){
+
     try{
         const res = await fetch(`/api/gare/${id}`);
         const gara = await res.json();
@@ -922,33 +972,24 @@ async function caricaGaraDaModificare(id){
         }
 
         modalitaModifica = true;
+        garaInModifica = gara;
 
-        if(pageTitle){
-            pageTitle.textContent = "Modifica Gara";
-        }
+        document.querySelector(".page-header h1").textContent =
+            "Modifica Gara";
 
-        document.getElementById("codice_gara").value = gara.codice_gara || "";
-        document.getElementById("nome").value = gara.nome || "";
-        document.getElementById("data").value = gara.data || "";
-        document.getElementById("luogo").value = gara.luogo || "";
-		if(indirizzo){
-    indirizzo.value = gara.indirizzo || "";
-}
+        document.getElementById("codice_gara").value =
+            gara.codice_gara || "";
 
-        const tipoSalvato = gara.tipo_gara || "";
+        document.getElementById("nome").value =
+            gara.nome || "";
 
-        if(isTargaOutdoor(tipoSalvato) || tipoSalvato === "Indoor all'aperto 😉"){
-            garantisciOpzioneTipoGara("Indoor all'aperto 😉");
-            tipoGara.value = "Indoor all'aperto 😉";
-            targaAllApertoFitarco = true;
-            distanzaAllApertoFitarco = gara.distanza || "";
-        }else{
-            garantisciOpzioneTipoGara(tipoSalvato);
-            tipoGara.value = tipoSalvato;
-            targaAllApertoFitarco = false;
-            distanzaAllApertoFitarco = "";
-        }
+        document.getElementById("data").value =
+            gara.data || "";
 
+        document.getElementById("luogo").value =
+            gara.luogo || "";
+
+        tipoGara.value = gara.tipo_gara || "";
         aggiornaCampi();
 
         tipoArco.value = gara.tipo_arco || "";
@@ -959,14 +1000,11 @@ async function caricaGaraDaModificare(id){
             distanza.value = gara.distanza;
         }
 
-        mostraDettagliGara();
-        mostraTipoGaraBanner(tipoGara.value);
-
         generaScore();
 
         setTimeout(() => {
             riempiScoreSalvato(gara.score || []);
-            aggiornaScore(tipoScoreDaScelta(), RULES[tipoScoreDaScelta()]);
+            aggiornaScore(tipoGara.value, RULES[tipoGara.value]);
         }, 100);
 
         mostraPopup("Gara caricata in modifica", "success");
@@ -978,14 +1016,22 @@ async function caricaGaraDaModificare(id){
 }
 
 function riempiScoreSalvato(score){
+
     score.forEach(r => {
+
+        let selector = "";
+
         const isPercorso =
             tipoGara.value.includes("3D") ||
             tipoGara.value.includes("Campagna");
 
-        const selector = isPercorso
-            ? `.arrow-input[data-target="${r.volee}"][data-arrow="${r.freccia}"]`
-            : `.arrow-input[data-serie="${r.serie}"][data-volley="${r.volee}"][data-arrow="${r.freccia}"]`;
+        if(isPercorso){
+            selector =
+                `.arrow-input[data-target="${r.volee}"][data-arrow="${r.freccia}"]`;
+        }else{
+            selector =
+                `.arrow-input[data-serie="${r.serie}"][data-volley="${r.volee}"][data-arrow="${r.freccia}"]`;
+        }
 
         const input = document.querySelector(selector);
 
@@ -994,133 +1040,4 @@ function riempiScoreSalvato(score){
             applicaColore(input, r.valore, tipoGara.value);
         }
     });
-}
-
-function mostraPopup(testo, tipo="success"){
-    const popup = document.getElementById("popup");
-    const popupText = document.getElementById("popupText");
-    const popupIcon = document.getElementById("popupIcon");
-
-    if(!popup || !popupText || !popupIcon){
-        alert(testo);
-        return;
-    }
-
-    popupText.textContent = testo;
-
-    popup.classList.remove("hidden", "popup-success", "popup-error");
-
-    if(tipo === "success"){
-        popup.classList.add("popup-success");
-        popupIcon.textContent = "✅";
-    }else{
-        popup.classList.add("popup-error");
-        popupIcon.textContent = "⚠️";
-    }
-
-    setTimeout(() => {
-        popup.classList.add("hidden");
-    }, 3000);
-}
-function normalizzaTestoGara(value){
-    return String(value || "")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g,"")
-        .replace(/[’']/g," ")
-        .replace(/\s+/g," ")
-        .trim();
-}
-
-function normalizzaDistanzaIndoorAperto(distanzaValore,nomeGara="",tipoGaraValore=""){
-    const d = String(distanzaValore || "").trim();
-
-    if(d === "25+18" || d === "18+25") return "18+25";
-    if(d === "25") return "25";
-    if(d === "18") return "18";
-
-    const testo = normalizzaTestoGara(`${nomeGara || ""} ${tipoGaraValore || ""}`);
-
-    if(testo.includes("25+18") || testo.includes("18+25") || testo.includes("25 + 18") || testo.includes("18 + 25")){
-        return "18+25";
-    }
-
-    if(/\b25\s*m\b/.test(testo) || /\b25m\b/.test(testo) || /\b25\s*metri\b/.test(testo)){
-        return "25";
-    }
-
-    if(/\b18\s*m\b/.test(testo) || /\b18m\b/.test(testo) || /\b18\s*metri\b/.test(testo)){
-        return "18";
-    }
-
-    return "";
-}
-
-function normalizzaTipoGaraFrontend(tipo,distanzaValore,dati={}){
-
-    const raw = String(tipo || "").trim();
-
-    if(raw === "Indoor 18m" || raw === "Indoor 25m" || raw === "Indoor 18+25"){
-        return raw;
-    }
-
-    if(raw === "Indoor all'aperto 😉"){
-        return "Indoor all'aperto 😉";
-    }
-
-    if(Boolean(dati.all_aperto)){
-        return "Indoor all'aperto 😉";
-    }
-
-    const testo = normalizzaTestoGara(`${raw} ${dati.nome || ""}`);
-
-    if(testo.includes("all aperto") || testo.includes("aperto")){
-        return "Indoor all'aperto 😉";
-    }
-
-    if(raw && archi[raw]){
-        return raw;
-    }
-
-    return raw || "Targa";
-}
-
-function tipoScoreDaScelta(){
-
-    const tipo = tipoGara.value;
-    const d = distanza ? String(distanza.value || "") : "";
-
-    if(tipo === "Indoor all'aperto 😉"){
-        if(d === "18") return "Indoor 18m";
-        if(d === "25") return "Indoor 25m";
-        if(d === "18+25" || d === "25+18") return "Indoor 18+25";
-        return "Indoor 18m";
-    }
-
-    return tipo;
-}
-
-function isIndoorAllAperto(tipo){
-    return tipo === "Indoor all'aperto 😉";
-}
-
-function isTargaOutdoor(tipo){
-    return tipo === "Targa 18m" || tipo === "Targa 25m" || tipo === "Targa 18+25m";
-}
-
-function distanzaSalvataggio(tipo){
-    if(tipo === "Indoor all'aperto 😉"){
-        return distanza ? distanza.value : null;
-    }
-
-    return distanceContainer.style.display === "none" ? null : distanza.value;
-}
-
-function slug(text){
-    return String(text || "")
-        .toLowerCase()
-        .replaceAll("/","")
-        .replaceAll("&","")
-        .replaceAll("+","")
-        .replaceAll(" ","-");
 }
