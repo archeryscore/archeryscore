@@ -717,7 +717,7 @@ async function salvaAllenamento(){
         mostraPopup(modalitaModifica ? "Allenamento modificato" : "Allenamento salvato", "success");
 
         setTimeout(() => {
-            window.location.href = "/";
+            window.location.href = "/home.html";
         }, 1200);
 
     }catch(err){
