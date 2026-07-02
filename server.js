@@ -71,12 +71,50 @@ async function createMailTransporter(){
     });
 }
 
+
+async function sendArcheryMailViaResend({ to, subject, html, text }){
+    const apiKey = process.env.RESEND_API_KEY;
+    if(!apiKey) return { sent:false, reason:"RESEND_API_KEY non configurata" };
+
+    const from = process.env.RESEND_FROM || process.env.SMTP_FROM || "ArcheryScore <onboarding@resend.dev>";
+
+    const response = await fetch("https://api.resend.com/emails",{
+        method:"POST",
+        headers:{
+            "Authorization":"Bearer " + apiKey,
+            "Content-Type":"application/json",
+            "User-Agent":"ArcheryScore/1.0"
+        },
+        body:JSON.stringify({
+            from,
+            to:[to],
+            subject,
+            html,
+            text:text || ""
+        })
+    });
+
+    const data = await response.json().catch(()=>({}));
+
+    if(!response.ok){
+        const msg = data?.message || data?.error || JSON.stringify(data);
+        throw new Error("Resend API: " + msg);
+    }
+
+    console.log("Email inviata via Resend:", subject, "->", to, data.id || "");
+    return { sent:true, provider:"resend", id:data.id };
+}
+
 async function sendArcheryMail({ to, subject, html, text }){
+    if(process.env.RESEND_API_KEY){
+        return await sendArcheryMailViaResend({ to, subject, html, text });
+    }
+
     const transporter = await createMailTransporter();
 
     if(!transporter){
         console.log("EMAIL NON CONFIGURATA:", { to, subject, text });
-        return { sent:false, reason:"SMTP non configurato" };
+        return { sent:false, reason:"Nessun provider email configurato" };
     }
 
     await transporter.verify();
@@ -89,8 +127,8 @@ async function sendArcheryMail({ to, subject, html, text }){
         text
     });
 
-    console.log("Email inviata:", subject, "->", to);
-    return { sent:true };
+    console.log("Email inviata via SMTP:", subject, "->", to);
+    return { sent:true, provider:"smtp" };
 }
 
 function buildEmailButton(url,label){
