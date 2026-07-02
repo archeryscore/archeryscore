@@ -1,93 +1,121 @@
-async function checkAdmin(){
-    const r = await fetch("/api/auth/me");
-    if(!r.ok){ location.href="/login.html"; return false; }
-    const data = await r.json();
-    if(!data.user || !data.user.is_admin){
-        alert("Accesso riservato all'amministratore");
-        location.href="/home.html";
-        return false;
+async function api(url,options={}){
+    const r=await fetch(url,{
+        headers:{ "Content-Type":"application/json" },
+        ...options
+    });
+
+    const j=await r.json().catch(()=>({}));
+
+    if(!r.ok){
+        throw new Error(j.message || "Errore");
     }
-    return true;
+
+    return j;
 }
 
-function plurale(n,sing,plur){return Number(n)===1?sing:plur;}
+function esc(s){
+    return String(s ?? "").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));
+}
 
-async function caricaUtenti(){
-    const r = await fetch("/api/admin/utenti");
-    if(!r.ok){ alert("Non autorizzato"); return; }
-    const data = await r.json();
-    const utenti = data.utenti || [];
+async function loadAdmin(){
+    try{
+        const me=await api("/api/auth/me");
+        if(!me.user || me.user.role!=="admin"){
+            location.href="/home.html";
+            return;
+        }
 
-    const totaleGare = utenti.reduce((s,u)=>s+Number(u.gare_count||0),0);
-    const totaleAllenamenti = utenti.reduce((s,u)=>s+Number(u.allenamenti_count||0),0);
-    const verificati = utenti.filter(u=>Number(u.email_verified||0)===1).length;
+        const summary=await api("/api/admin/summary");
+        renderStats(summary);
 
-    document.getElementById("adminSummary").innerHTML = `
-        <div class="admin-kpi"><strong>${utenti.length}</strong><span>${plurale(utenti.length,"utente","utenti")}</span></div>
-        <div class="admin-kpi"><strong>${totaleGare}</strong><span>${plurale(totaleGare,"gara","gare")}</span></div>
-        <div class="admin-kpi"><strong>${totaleAllenamenti}</strong><span>${plurale(totaleAllenamenti,"allenamento","allenamenti")}</span></div>
-        <div class="admin-kpi"><strong>${verificati}</strong><span>email verificate</span></div>
-    `;
+        const users=await api("/api/admin/users");
+        renderUsers(users.users || []);
+    }catch(err){
+        alert(err.message || "Accesso admin non disponibile");
+        location.href="/home.html";
+    }
+}
 
-    document.getElementById("adminUsers").innerHTML = utenti.map(u=>`
-        <div class="admin-user">
-            <div><strong>${u.username}</strong><small>ID ${u.id}</small></div>
-            <div>${u.email || "-"}<small>${Number(u.email_verified||0)===1?"Email verificata":"Email non verificata"}</small></div>
-            <div><strong>${u.gare_count||0}</strong><small>gare</small></div>
-            <div><strong>${u.allenamenti_count||0}</strong><small>allenamenti</small></div>
-            <div><strong>${Number(u.is_admin||0)===1?"Admin":"Utente"}</strong><small>${Number(u.blocked||0)===1?"Bloccato":"Attivo"}</small></div>
-            <div class="admin-actions">
-                <button class="blue" onclick="vediUtente(${u.id})">Vedi</button>
-                ${Number(u.blocked||0)===1
-                    ? `<button class="green" onclick="sbloccaUtente(${u.id})">Sblocca</button>`
-                    : `<button onclick="bloccaUtente(${u.id})">Blocca</button>`}
-                ${Number(u.id)!==1 ? `<button class="danger" onclick="eliminaUtente(${u.id})">Elimina</button>` : ""}
-            </div>
+function renderStats(s){
+    document.getElementById("adminStats").innerHTML=[
+        ["Utenti",s.utenti],
+        ["Verificati",s.verificati],
+        ["Bloccati",s.bloccati],
+        ["Gare",s.gare],
+        ["Allenamenti",s.allenamenti]
+    ].map(([label,value])=>`
+        <div class="admin-stat">
+            <strong>${esc(value)}</strong>
+            <span>${esc(label)}</span>
         </div>
     `).join("");
 }
 
-async function vediUtente(id){
-    const r = await fetch(`/api/admin/utenti/${id}/dati`);
-    const data = await r.json();
-    if(!data.success){ alert(data.message || "Errore"); return; }
+function renderUsers(users){
+    document.getElementById("adminUsers").innerHTML=users.map(u=>`
+        <tr>
+            <td><strong>${esc(u.username)}</strong><br><small>ID ${esc(u.id)}</small></td>
+            <td>${esc(u.email)}</td>
+            <td><span class="admin-badge">${esc(u.role || "user")}</span></td>
+            <td>${Number(u.email_verified||0)===1?'<span class="admin-badge ok">Sì</span>':'<span class="admin-badge no">No</span>'}</td>
+            <td>${Number(u.blocked||0)===1?'<span class="admin-badge no">Bloccato</span>':'<span class="admin-badge ok">Attivo</span>'}</td>
+            <td>${esc(u.gare_count || 0)}</td>
+            <td>${esc(u.allenamenti_count || 0)}</td>
+            <td>${esc(u.last_login || "-")}</td>
+            <td>
+                <div class="admin-actions">
+                    <button class="admin-action small blue" onclick="viewUser(${u.id})">Vedi</button>
+                    ${Number(u.email_verified||0)!==1?`<button class="admin-action small green" onclick="verifyUser(${u.id})">Verifica</button>`:""}
+                    ${Number(u.blocked||0)===1?`<button class="admin-action small green" onclick="unblockUser(${u.id})">Sblocca</button>`:`<button class="admin-action small gray" onclick="blockUser(${u.id})">Blocca</button>`}
+                    <button class="admin-action small blue" onclick="setRole(${u.id},'${u.role==='admin'?'user':'admin'}')">${u.role==='admin'?'Utente':'Admin'}</button>
+                    <button class="admin-action small red" onclick="deleteUser(${u.id},'${esc(u.username)}')">Elimina</button>
+                </div>
+            </td>
+        </tr>
+    `).join("");
+}
 
-    document.getElementById("userDetailsCard").classList.remove("hidden");
-    document.getElementById("detailsTitle").textContent = `Dettaglio ${data.user.username}`;
+async function viewUser(id){
+    const data=await api(`/api/admin/users/${id}/data`);
+    const box=document.getElementById("adminUserDetail");
+    box.classList.remove("hidden-auth-box");
 
-    document.getElementById("userDetails").innerHTML = `
+    box.innerHTML=`
+        <h2>${esc(data.user.username)}</h2>
+        <p><strong>Email:</strong> ${esc(data.user.email)} · <strong>Ruolo:</strong> ${esc(data.user.role)}</p>
         <div class="admin-detail-grid">
-            <div class="admin-detail-list">
-                <h3>Gare</h3>
-                ${(data.gare||[]).map(g=>`<p><strong>${g.data||"-"}</strong> - ${g.nome||"Gara"} - ${g.punteggio||0}</p>`).join("") || "<p>Nessuna gara</p>"}
+            <div>
+                <h3>Gare (${data.gare.length})</h3>
+                ${data.gare.slice(0,30).map(g=>`
+                    <div class="admin-list-item">
+                        <span>${esc(g.data)} · ${esc(g.nome || g.tipo_gara)}</span>
+                        <strong>${esc(g.punteggio)}</strong>
+                    </div>
+                `).join("") || "<p>Nessuna gara</p>"}
             </div>
-            <div class="admin-detail-list">
-                <h3>Allenamenti</h3>
-                ${(data.allenamenti||[]).map(a=>`<p><strong>${a.data||"-"}</strong> - ${a.tipo_allenamento||"Allenamento"} - ${a.punteggio||0}</p>`).join("") || "<p>Nessun allenamento</p>"}
+            <div>
+                <h3>Allenamenti (${data.allenamenti.length})</h3>
+                ${data.allenamenti.slice(0,30).map(a=>`
+                    <div class="admin-list-item">
+                        <span>${esc(a.data)} · ${esc(a.tipo_allenamento)}</span>
+                        <strong>${esc(a.punteggio)}</strong>
+                    </div>
+                `).join("") || "<p>Nessun allenamento</p>"}
             </div>
         </div>
     `;
 }
 
-function chiudiDettaglio(){
-    document.getElementById("userDetailsCard").classList.add("hidden");
+async function verifyUser(id){ await api(`/api/admin/users/${id}/verify`,{method:"POST"}); loadAdmin(); }
+async function blockUser(id){ await api(`/api/admin/users/${id}/block`,{method:"POST"}); loadAdmin(); }
+async function unblockUser(id){ await api(`/api/admin/users/${id}/unblock`,{method:"POST"}); loadAdmin(); }
+async function setRole(id,role){ await api(`/api/admin/users/${id}/role`,{method:"POST",body:JSON.stringify({role})}); loadAdmin(); }
+
+async function deleteUser(id,name){
+    if(!confirm(`Eliminare definitivamente ${name}? Verranno cancellate anche gare e allenamenti.`)) return;
+    await api(`/api/admin/users/${id}`,{method:"DELETE"});
+    loadAdmin();
 }
 
-async function bloccaUtente(id){
-    if(!confirm("Bloccare questo utente?")) return;
-    await fetch(`/api/admin/utenti/${id}/blocca`,{method:"POST"});
-    caricaUtenti();
-}
-
-async function sbloccaUtente(id){
-    await fetch(`/api/admin/utenti/${id}/sblocca`,{method:"POST"});
-    caricaUtenti();
-}
-
-async function eliminaUtente(id){
-    if(!confirm("Eliminare definitivamente utente e dati?")) return;
-    await fetch(`/api/admin/utenti/${id}`,{method:"DELETE"});
-    caricaUtenti();
-}
-
-(async()=>{ if(await checkAdmin()) caricaUtenti(); })();
+document.getElementById("refreshAdmin")?.addEventListener("click",loadAdmin);
+loadAdmin();
