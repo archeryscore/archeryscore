@@ -5,8 +5,6 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const express = require("express");
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
-const dns = require("dns");
 const db = require("./database/db");
 
 const app = express();
@@ -18,126 +16,6 @@ app.use(express.json({ limit:"50mb" }));
 // AUTH MULTIUTENTE
 // =======================
 const COOKIE_NAME = "archeryscore_session";
-const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3001";
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "archeryscore.support@gmail.com";
-
-try{ dns.setDefaultResultOrder("ipv4first"); }catch(e){}
-
-function isEmailValid(email){
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
-}
-
-async function resolveSmtpHost(host){
-    if(/^\d+\.\d+\.\d+\.\d+$/.test(host)) return host;
-
-    try{
-        const addresses = await dns.promises.resolve4(host);
-        if(addresses && addresses.length){
-            console.log("SMTP IPv4:", host, "->", addresses[0]);
-            return addresses[0];
-        }
-    }catch(err){
-        console.error("Errore resolve4 SMTP:", err.message);
-    }
-
-    return host;
-}
-
-async function createMailTransporter(){
-    const originalHost = process.env.SMTP_HOST || "smtp.gmail.com";
-    const host = await resolveSmtpHost(originalHost);
-    const user = process.env.SMTP_USER;
-    const pass = String(process.env.SMTP_PASS || "").replace(/\s+/g,"");
-    const port = Number(process.env.SMTP_PORT || 587);
-
-    if(!user || !pass){
-        return null;
-    }
-
-    return nodemailer.createTransport({
-        host,
-        port,
-        secure:port === 465,
-        family:4,
-        auth:{ user, pass },
-        requireTLS:port === 587,
-        connectionTimeout:30000,
-        greetingTimeout:30000,
-        socketTimeout:45000,
-        tls:{
-            servername:originalHost,
-            rejectUnauthorized:true
-        }
-    });
-}
-
-
-async function sendArcheryMailViaResend({ to, subject, html, text }){
-    const apiKey = process.env.RESEND_API_KEY;
-    if(!apiKey) return { sent:false, reason:"RESEND_API_KEY non configurata" };
-
-    const from = process.env.RESEND_FROM || process.env.SMTP_FROM || "ArcheryScore <onboarding@resend.dev>";
-
-    const response = await fetch("https://api.resend.com/emails",{
-        method:"POST",
-        headers:{
-            "Authorization":"Bearer " + apiKey,
-            "Content-Type":"application/json",
-            "User-Agent":"ArcheryScore/1.0"
-        },
-        body:JSON.stringify({
-            from,
-            to:[to],
-            subject,
-            html,
-            text:text || ""
-        })
-    });
-
-    const data = await response.json().catch(()=>({}));
-
-    if(!response.ok){
-        const msg = data?.message || data?.error || JSON.stringify(data);
-        throw new Error("Resend API: " + msg);
-    }
-
-    console.log("Email inviata via Resend:", subject, "->", to, data.id || "");
-    return { sent:true, provider:"resend", id:data.id };
-}
-
-async function sendArcheryMail({ to, subject, html, text }){
-    if(process.env.RESEND_API_KEY){
-        return await sendArcheryMailViaResend({ to, subject, html, text });
-    }
-
-    const transporter = await createMailTransporter();
-
-    if(!transporter){
-        console.log("EMAIL NON CONFIGURATA:", { to, subject, text });
-        return { sent:false, reason:"Nessun provider email configurato" };
-    }
-
-    await transporter.verify();
-
-    await transporter.sendMail({
-        from:process.env.SMTP_FROM || `"ArcheryScore" <${process.env.SMTP_USER}>`,
-        to,
-        subject,
-        html,
-        text
-    });
-
-    console.log("Email inviata via SMTP:", subject, "->", to);
-    return { sent:true, provider:"smtp" };
-}
-
-function buildEmailButton(url,label){
-    return `<div style="margin:28px 0"><a href="${url}" style="display:inline-block;background:#ffcc00;color:#061044;padding:14px 22px;border-radius:14px;text-decoration:none;font-weight:900">${label}</a></div>`;
-}
-
-function archeryEmailTemplate(title,message,buttonHtml,small=""){
-    return `<div style="font-family:Arial,sans-serif;background:#020b3a;padding:28px;color:#fff"><div style="max-width:620px;margin:auto;background:#0d1f6b;border:1px solid rgba(255,255,255,.15);border-radius:22px;padding:28px"><h1 style="margin:0 0 10px;color:#ffcc00">🎯 ARCHERYSCORE</h1><h2 style="margin:0 0 18px;color:#fff">${title}</h2><p style="font-size:17px;line-height:1.5;color:#c7d2ff">${message}</p>${buttonHtml || ""}${small ? `<p style="font-size:13px;line-height:1.4;color:#9aa7d9">${small}</p>` : ""}</div></div>`;
-}
 
 function parseCookies(req){
     const header = req.headers.cookie || "";
@@ -207,11 +85,6 @@ db.serialize(() => {
         username TEXT UNIQUE NOT NULL,
         email TEXT UNIQUE,
         password_hash TEXT NOT NULL,
-        role TEXT DEFAULT 'user',
-        email_verified INTEGER DEFAULT 0,
-        verification_token TEXT,
-        blocked INTEGER DEFAULT 0,
-        last_login TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )`);
 
@@ -229,16 +102,7 @@ db.serialize(() => {
         used INTEGER DEFAULT 0
     )`);
 
-    addColumnIfMissing("users","role","TEXT DEFAULT 'user'");
-    addColumnIfMissing("users","email_verified","INTEGER DEFAULT 0");
-    addColumnIfMissing("users","verification_token","TEXT");
-    addColumnIfMissing("users","blocked","INTEGER DEFAULT 0");
-    addColumnIfMissing("users","last_login","TEXT");
-
-    db.run("INSERT OR IGNORE INTO users(id,username,email,password_hash,role,email_verified,blocked) VALUES(1,'admin',?,?,'admin',1,0)",[ADMIN_EMAIL,hashPassword("admin123")], err => {
-        if(err) console.error("Init admin:", err.message);
-        db.run("UPDATE users SET role = 'admin', email_verified = 1, blocked = 0 WHERE id = 1 OR username = 'admin'");
-    });
+    db.run("INSERT OR IGNORE INTO users(id,username,email,password_hash) VALUES(1,'admin','',?)",[hashPassword("admin123")]);
 
     addColumnIfMissing("gare","user_id","INTEGER DEFAULT 1",() => {
         db.run("UPDATE gare SET user_id = 1 WHERE user_id IS NULL", [], err => {
@@ -264,7 +128,7 @@ function authMiddleware(req,res,next){
     }
 
     db.get(`
-        SELECT sessions.*, users.username, users.email, users.role, users.email_verified, users.blocked
+        SELECT sessions.*, users.username, users.email
         FROM sessions
         JOIN users ON users.id = sessions.user_id
         WHERE sessions.token = ?
@@ -274,17 +138,7 @@ function authMiddleware(req,res,next){
             return res.status(401).json({ success:false, auth:false, message:"Sessione scaduta" });
         }
 
-        if(Number(row.blocked || 0) === 1){
-            return res.status(403).json({ success:false, message:"Account bloccato" });
-        }
-        req.user = {
-            id:row.user_id,
-            username:row.username,
-            email:row.email,
-            role:row.role || "user",
-            email_verified:Number(row.email_verified || 0),
-            blocked:Number(row.blocked || 0)
-        };
+        req.user = { id:row.user_id, username:row.username, email:row.email };
         next();
     });
 }
@@ -308,82 +162,18 @@ function createSession(userId,res,cb){
     });
 }
 
-app.post("/api/auth/register",async (req,res)=>{
+app.post("/api/auth/register",(req,res)=>{
     const username = String(req.body.username || "").trim();
-    const email = String(req.body.email || "").trim().toLowerCase();
+    const email = String(req.body.email || "").trim();
     const password = String(req.body.password || "");
 
     if(username.length < 3 || password.length < 6){
         return res.status(400).json({ success:false, message:"Username minimo 3 caratteri e password minimo 6" });
     }
-    if(!isEmailValid(email)){
-        return res.status(400).json({ success:false, message:"Inserisci una email valida" });
-    }
 
-    const verificationToken = crypto.randomBytes(32).toString("hex");
-
-    db.run("INSERT INTO users(username,email,password_hash,role,email_verified,verification_token,blocked) VALUES(?,?,?,?,?,?,0)",
-        [username,email,hashPassword(password),"user",0,verificationToken],
-        async function(err){
-            if(err) return res.status(400).json({ success:false, message:"Username o email già registrati" });
-
-            const verifyUrl = `${APP_BASE_URL}/verify-email.html?token=${verificationToken}`;
-            try{
-                await sendArcheryMail({
-                    to:email,
-                    subject:"Conferma il tuo account ArcheryScore",
-                    text:`Conferma il tuo account aprendo questo link: ${verifyUrl}`,
-                    html:archeryEmailTemplate("Conferma il tuo account",`Ciao ${username}, grazie per esserti registrato su ArcheryScore. Per attivare il tuo account conferma la tua email.`,buildEmailButton(verifyUrl,"Conferma email"),`Se il pulsante non funziona, copia questo link nel browser: ${verifyUrl}`)
-                });
-            }catch(mailErr){
-                console.error("Errore invio verifica email:", mailErr.message);
-            }
-
-            res.json({ success:true, pending_verification:true, message:"Account creato. Controlla la tua email per confermare la registrazione. Controlla anche la cartella Spam." });
-        }
-    );
-});
-
-app.get("/api/auth/verify",(req,res)=>{
-    const token = String(req.query.token || "").trim();
-    if(!token) return res.status(400).json({ success:false, message:"Token mancante" });
-
-    db.get("SELECT id FROM users WHERE verification_token = ?",[token],(err,user)=>{
-        if(err || !user) return res.status(400).json({ success:false, message:"Link non valido o già utilizzato" });
-        db.run("UPDATE users SET email_verified = 1, verification_token = NULL WHERE id = ?",[user.id],err=>{
-            if(err) return res.status(500).json({ success:false, message:"Errore conferma email" });
-            res.json({ success:true, message:"Email confermata. Ora puoi accedere." });
-        });
-    });
-});
-
-app.post("/api/auth/resend-verification",async (req,res)=>{
-    const email = String(req.body.email || "").trim().toLowerCase();
-    if(!isEmailValid(email)) return res.status(400).json({ success:false, message:"Inserisci una email valida" });
-
-    db.get("SELECT * FROM users WHERE email = ?",[email],async (err,user)=>{
-        if(err || !user || Number(user.email_verified || 0) === 1){
-            return res.json({ success:true, message:"Se l'account esiste ed è da confermare, riceverai una nuova email." });
-        }
-
-        const verificationToken = crypto.randomBytes(32).toString("hex");
-        db.run("UPDATE users SET verification_token = ? WHERE id = ?",[verificationToken,user.id],async err=>{
-            if(err) return res.status(500).json({ success:false, message:"Errore invio conferma" });
-
-            const verifyUrl = `${APP_BASE_URL}/verify-email.html?token=${verificationToken}`;
-            try{
-                await sendArcheryMail({
-                    to:user.email,
-                    subject:"Conferma il tuo account ArcheryScore",
-                    text:`Conferma il tuo account aprendo questo link: ${verifyUrl}`,
-                    html:archeryEmailTemplate("Conferma il tuo account",`Ciao ${user.username}, clicca sul pulsante per attivare il tuo account ArcheryScore.`,buildEmailButton(verifyUrl,"Conferma email"),`Se il pulsante non funziona, copia questo link nel browser: ${verifyUrl}`)
-                });
-            }catch(mailErr){
-                console.error("Errore reinvio verifica:", mailErr.message);
-            }
-
-            res.json({ success:true, message:"Se l'account è da confermare, riceverai una nuova email." });
-        });
+    db.run("INSERT INTO users(username,email,password_hash) VALUES(?,?,?)",[username,email,hashPassword(password)],function(err){
+        if(err) return res.status(400).json({ success:false, message:"Username o email già registrati" });
+        createSession(this.lastID,res,()=>res.json({ success:true, user:{ id:this.lastID, username, email } }));
     });
 });
 
@@ -391,19 +181,12 @@ app.post("/api/auth/login",(req,res)=>{
     const username = String(req.body.username || "").trim();
     const password = String(req.body.password || "");
 
-    db.get("SELECT * FROM users WHERE username = ? OR email = ?",[username,username.toLowerCase()],(err,user)=>{
+    db.get("SELECT * FROM users WHERE username = ? OR email = ?",[username,username],(err,user)=>{
         if(err || !user || !verifyPassword(password,user.password_hash)){
             return res.status(401).json({ success:false, message:"Credenziali non valide" });
         }
-        if(Number(user.blocked || 0) === 1){
-            return res.status(403).json({ success:false, message:"Account bloccato. Contatta il supporto." });
-        }
-        if((user.role || "user") !== "admin" && Number(user.email_verified || 0) !== 1){
-            return res.status(403).json({ success:false, needs_verification:true, message:"Devi confermare la tua email prima di accedere." });
-        }
 
-        db.run("UPDATE users SET last_login = ? WHERE id = ?",[nowSqlDate(),user.id]);
-        createSession(user.id,res,()=>res.json({ success:true, user:{ id:user.id, username:user.username, email:user.email, role:user.role || "user", email_verified:Number(user.email_verified || 0) } }));
+        createSession(user.id,res,()=>res.json({ success:true, user:{ id:user.id, username:user.username, email:user.email } }));
     });
 });
 
@@ -420,7 +203,7 @@ app.get("/api/auth/me",(req,res)=>{
     if(!token) return res.status(401).json({ success:false, auth:false });
 
     db.get(`
-        SELECT users.id,users.username,users.email,users.role,users.email_verified,users.blocked
+        SELECT users.id,users.username,users.email
         FROM sessions
         JOIN users ON users.id = sessions.user_id
         WHERE sessions.token = ?
@@ -432,30 +215,19 @@ app.get("/api/auth/me",(req,res)=>{
 });
 
 app.post("/api/password/request-reset",(req,res)=>{
-    const key = String(req.body.email || req.body.username || "").trim().toLowerCase();
+    const key = String(req.body.email || req.body.username || "").trim();
 
-    db.get("SELECT * FROM users WHERE email = ? OR username = ?",[key,key],async (err,user)=>{
+    db.get("SELECT * FROM users WHERE email = ? OR username = ?",[key,key],(err,user)=>{
         if(err || !user){
-            return res.json({ success:true, message:"Se l'account esiste, riceverai una email per il reset." });
+            return res.json({ success:true, message:"Se l'utente esiste, è stato generato un codice." });
         }
 
-        const token = crypto.randomBytes(32).toString("hex");
+        const token = crypto.randomBytes(18).toString("hex");
         const expires = new Date(Date.now()+1000*60*30).toISOString().slice(0,19).replace("T"," ");
-        const resetUrl = `${APP_BASE_URL}/reset-password.html?token=${token}`;
 
-        db.run("INSERT INTO password_resets(token,user_id,expires_at) VALUES(?,?,?)",[token,user.id,expires],async ()=>{
-            try{
-                await sendArcheryMail({
-                    to:user.email,
-                    subject:"Reset password ArcheryScore",
-                    text:`Reimposta la password aprendo questo link: ${resetUrl}`,
-                    html:archeryEmailTemplate("Reset password",`Ciao ${user.username}, abbiamo ricevuto una richiesta di cambio password. Il link scade tra 30 minuti.`,buildEmailButton(resetUrl,"Reimposta password"),`Se non hai richiesto tu il reset, ignora questa email. Link: ${resetUrl}`)
-                });
-            }catch(mailErr){
-                console.error("Errore invio reset:", mailErr.message);
-            }
-
-            res.json({ success:true, message:"Se l'account esiste, riceverai una email per il reset. Controlla anche la cartella Spam." });
+        db.run("INSERT INTO password_resets(token,user_id,expires_at) VALUES(?,?,?)",[token,user.id,expires],()=>{
+            // In locale il codice viene mostrato; online lo invieremo via email.
+            res.json({ success:true, message:"Codice generato", reset_token:token });
         });
     });
 });
@@ -478,93 +250,6 @@ app.post("/api/password/reset",(req,res)=>{
     });
 });
 
-
-
-function requireAdmin(req,res,next){
-    if(!req.user || req.user.role !== "admin"){
-        return res.status(403).json({ success:false, message:"Accesso admin negato" });
-    }
-    next();
-}
-function dbGetPromise(sql,params=[]){ return new Promise(resolve => db.get(sql,params,(err,row)=>resolve(err ? null : row))); }
-function dbAllPromise(sql,params=[]){ return new Promise(resolve => db.all(sql,params,(err,rows)=>resolve(err ? [] : (rows || [])))); }
-
-function sendResetPasswordToUser(user,res){
-    const token = crypto.randomBytes(32).toString("hex");
-    const expires = new Date(Date.now()+1000*60*30).toISOString().slice(0,19).replace("T"," ");
-    const resetUrl = `${APP_BASE_URL}/reset-password.html?token=${token}`;
-
-    db.run("INSERT INTO password_resets(token,user_id,expires_at) VALUES(?,?,?)",[token,user.id,expires],async err=>{
-        if(err) return res.status(500).json({ success:false, message:"Errore creazione reset" });
-        try{
-            await sendArcheryMail({
-                to:user.email,
-                subject:"Reset password ArcheryScore",
-                text:`Reimposta la password aprendo questo link: ${resetUrl}`,
-                html:archeryEmailTemplate("Reset password",`Ciao ${user.username}, un amministratore ArcheryScore ha generato un link per impostare una nuova password. Il link scade tra 30 minuti.`,buildEmailButton(resetUrl,"Reimposta password"),`Link: ${resetUrl}`)
-            });
-        }catch(mailErr){ console.error("Errore invio reset admin:", mailErr.message); }
-        res.json({ success:true, message:"Email di reset inviata se SMTP è configurato." });
-    });
-}
-
-app.get("/api/admin/summary", requireAdmin, async (req,res)=>{
-    const utenti = await dbGetPromise("SELECT COUNT(*) AS total FROM users");
-    const verificati = await dbGetPromise("SELECT COUNT(*) AS total FROM users WHERE email_verified = 1");
-    const bloccati = await dbGetPromise("SELECT COUNT(*) AS total FROM users WHERE blocked = 1");
-    const gare = await dbGetPromise("SELECT COUNT(*) AS total FROM gare");
-    const allenamenti = await dbGetPromise("SELECT COUNT(*) AS total FROM allenamenti");
-    res.json({ success:true, utenti:Number(utenti?.total || 0), verificati:Number(verificati?.total || 0), bloccati:Number(bloccati?.total || 0), gare:Number(gare?.total || 0), allenamenti:Number(allenamenti?.total || 0) });
-});
-
-app.get("/api/admin/users", requireAdmin, async (req,res)=>{
-    const rows = await dbAllPromise(`SELECT users.id, users.username, users.email, users.role, users.email_verified, users.blocked, users.created_at, users.last_login, (SELECT COUNT(*) FROM gare WHERE gare.user_id = users.id) AS gare_count, (SELECT COUNT(*) FROM allenamenti WHERE allenamenti.user_id = users.id) AS allenamenti_count FROM users ORDER BY users.created_at DESC, users.id DESC`);
-    res.json({ success:true, users:rows });
-});
-
-app.get("/api/admin/users/:id/data", requireAdmin, async (req,res)=>{
-    const id=Number(req.params.id);
-    const user=await dbGetPromise("SELECT id,username,email,role,email_verified,blocked,created_at,last_login FROM users WHERE id = ?",[id]);
-    if(!user) return res.status(404).json({ success:false, message:"Utente non trovato" });
-    const gare=await dbAllPromise("SELECT * FROM gare WHERE user_id = ? ORDER BY data DESC,id DESC",[id]);
-    const allenamenti=await dbAllPromise("SELECT * FROM allenamenti WHERE user_id = ? ORDER BY data DESC,id DESC",[id]);
-    res.json({ success:true, user, gare, allenamenti });
-});
-
-app.post("/api/admin/users/:id/block", requireAdmin, (req,res)=>{
-    const id=Number(req.params.id);
-    if(id===1) return res.status(400).json({ success:false, message:"L'admin originale non può essere bloccato" });
-    db.run("UPDATE users SET blocked = 1 WHERE id = ?",[id],err=>{ if(err) return res.status(500).json({ success:false }); db.run("DELETE FROM sessions WHERE user_id = ?",[id]); res.json({ success:true }); });
-});
-app.post("/api/admin/users/:id/unblock", requireAdmin, (req,res)=>{ db.run("UPDATE users SET blocked = 0 WHERE id = ?",[Number(req.params.id)],err=>{ if(err) return res.status(500).json({ success:false }); res.json({ success:true }); }); });
-app.post("/api/admin/users/:id/verify", requireAdmin, (req,res)=>{ db.run("UPDATE users SET email_verified = 1, verification_token = NULL WHERE id = ?",[Number(req.params.id)],err=>{ if(err) return res.status(500).json({ success:false }); res.json({ success:true }); }); });
-app.post("/api/admin/users/:id/role", requireAdmin, (req,res)=>{
-    const id=Number(req.params.id);
-    const role=String(req.body.role || "user") === "admin" ? "admin" : "user";
-    if(id===1) return res.status(400).json({ success:false, message:"L'admin originale deve restare admin" });
-    db.run("UPDATE users SET role = ? WHERE id = ?",[role,id],err=>{ if(err) return res.status(500).json({ success:false }); res.json({ success:true }); });
-});
-app.post("/api/admin/users/:id/reset-password", requireAdmin, async (req,res)=>{
-    const id=Number(req.params.id);
-    if(id===1) return res.status(400).json({ success:false, message:"Usa il cambio password per l'admin originale" });
-    const user=await dbGetPromise("SELECT * FROM users WHERE id = ?",[id]);
-    if(!user) return res.status(404).json({ success:false, message:"Utente non trovato" });
-    sendResetPasswordToUser(user,res);
-});
-app.post("/api/admin/change-password", requireAdmin, (req,res)=>{
-    const currentPassword=String(req.body.currentPassword || "");
-    const newPassword=String(req.body.newPassword || "");
-    if(newPassword.length<6) return res.status(400).json({ success:false, message:"Nuova password troppo corta" });
-    db.get("SELECT * FROM users WHERE id = ?",[req.user.id],(err,user)=>{
-        if(err || !user || !verifyPassword(currentPassword,user.password_hash)) return res.status(400).json({ success:false, message:"Password attuale non corretta" });
-        db.run("UPDATE users SET password_hash = ? WHERE id = ?",[hashPassword(newPassword),req.user.id],err=>{ if(err) return res.status(500).json({ success:false }); res.json({ success:true }); });
-    });
-});
-app.delete("/api/admin/users/:id", requireAdmin, (req,res)=>{
-    const id=Number(req.params.id);
-    if(id===1) return res.status(400).json({ success:false, message:"L'admin originale non può essere eliminato" });
-    db.run("DELETE FROM score_entries WHERE gara_id IN (SELECT id FROM gare WHERE user_id = ?)",[id],()=>{ db.run("DELETE FROM allenamento_score_entries WHERE allenamento_id IN (SELECT id FROM allenamenti WHERE user_id = ?)",[id],()=>{ db.run("DELETE FROM gare WHERE user_id = ?",[id],()=>{ db.run("DELETE FROM allenamenti WHERE user_id = ?",[id],()=>{ db.run("DELETE FROM sessions WHERE user_id = ?",[id],()=>{ db.run("DELETE FROM password_resets WHERE user_id = ?",[id],()=>{ db.run("DELETE FROM users WHERE id = ?",[id],err=>{ if(err) return res.status(500).json({ success:false }); res.json({ success:true }); }); }); }); }); }); }); });
-});
 
 app.get("/api/gare", (req,res) => {
     db.all("SELECT * FROM gare WHERE user_id = ? ORDER BY data DESC", [req.user.id], (err,rows) => {
@@ -809,11 +494,10 @@ app.get("/api/fitarco/:codice", async (req,res) => {
         await cercaGaraExcelFitarco(codice);
 
         if(!garaExcel){
-            const garaOnline = await cercaGaraOnlineFitarco(codice);
-            if(!garaOnline){
-                return res.json({ success:false, message:"Gara non trovata nel calendario Excel o online FITARCO" });
-            }
-            return res.json({ success:true, fonte:"fitarco-online", nome:garaOnline.nome || "Gara " + codice, data:garaOnline.data || "", luogo:garaOnline.luogo || "", indirizzo:garaOnline.indirizzo || "", tipo_gara:garaOnline.tipo_gara || "Targa", distanza:garaOnline.distanza || "", all_aperto:garaOnline.all_aperto || false });
+            return res.json({
+                success:false,
+                message:"Gara non trovata nel calendario Excel"
+            });
         }
 
         const garaInvito =
@@ -840,33 +524,6 @@ app.get("/api/fitarco/:codice", async (req,res) => {
         });
     }
 });
-
-
-async function cercaGaraOnlineFitarco(codice){
-    const urls=[
-        "https://www.fitarco.it/gare-e-risultati/calendario.html",
-        "https://www.fitarco.it/gare-e-risultati/calendario.html?codice="+encodeURIComponent(codice),
-        "https://www.fitarco.it/gare-e-risultati/calendario.html?search="+encodeURIComponent(codice)
-    ];
-    for(const url of urls){
-        try{
-            const {data:html}=await axios.get(url,{timeout:15000,headers:{"User-Agent":"Mozilla/5.0 ArcheryScore","Accept":"text/html"}});
-            const $=cheerio.load(html);
-            const bodyText=$("body").text().replace(/\s+/g," ");
-            if(!bodyText.toUpperCase().includes(codice)) continue;
-            let foundText="";
-            $("tr, .views-row, .item, li, div").each((_,el)=>{ const t=$(el).text().replace(/\s+/g," ").trim(); if(!foundText && t.toUpperCase().includes(codice)) foundText=t; });
-            const text=foundText || bodyText;
-            const data=estraiDataDaTesto(text);
-            const luogoMatch=text.match(/([A-ZÀ-Ù][A-Za-zÀ-ÿ' .-]+)\s*\(([A-Z]{2})\)/);
-            const luogo=luogoMatch ? `${luogoMatch[1].trim()} (${luogoMatch[2]})` : "";
-            const tipo=normalizzaTipoGaraDaRiga([text],"","",text);
-            const distanza=estraiDistanzaDaTesto(text);
-            return { nome:pulisciNomeGaraExcel(text.slice(0,160)) || "Gara FITARCO " + codice, data, luogo, indirizzo:"", tipo_gara:tipo || "Targa", distanza, all_aperto:normalizzaStringa(text).includes("aperto") };
-        }catch(err){ console.error("Errore calendario FITARCO online:", err.message); }
-    }
-    return null;
-}
 
 async function cercaGaraExcelFitarco(codice){
 
