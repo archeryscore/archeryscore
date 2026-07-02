@@ -124,7 +124,15 @@ async function apriScoreAllenamento(id){
         </div>
 
         <div class="score-view-official">
-            ${rows.map(row => renderScoreRow(row, a)).join("")}
+            ${(() => {
+                let progressivo = 0;
+                return rows.map(row => {
+                    const html = renderScoreRow(row, a, progressivo);
+                    const values = row.arrows.sort((x,y) => Number(x.freccia) - Number(y.freccia)).map(r => String(r.valore || "").toUpperCase());
+                    progressivo += values.reduce((s,v) => s + scoreValueAllenamento(v),0);
+                    return html;
+                }).join("");
+            })()}
         </div>
 
         ${renderConfrontoPersonale(confronto)}
@@ -173,7 +181,7 @@ function raggruppaScore(score,allenamento=null){
     });
 }
 
-function renderScoreRow(row,a){
+function renderScoreRow(row,a,progressivoPrima=0){
     const arrows = row.arrows.sort((x,y) => Number(x.freccia) - Number(y.freccia));
     const values = arrows.map(r => String(r.valore || "").toUpperCase());
     const tot = values.reduce((s,v) => s + scoreValueAllenamento(v),0);
@@ -186,7 +194,8 @@ function renderScoreRow(row,a){
         return acc;
     },{a:0,b:0});
 
-    const columns = `70px repeat(${arrows.length},42px) 52px 64px 64px`;
+    const progressivo = progressivoPrima + tot;
+    const columns = `70px repeat(${arrows.length},42px) 52px 64px 64px 70px`;
 
     return `
         <div class="archive-score-row" style="grid-template-columns:${columns};">
@@ -195,6 +204,7 @@ function renderScoreRow(row,a){
             <span class="archive-total">${tot}</span>
             <span class="archive-special">${labels[0]}: ${special.a}</span>
             <span class="archive-special">${labels[1]}: ${special.b}</span>
+            <span class="archive-total">Tot: ${progressivo}</span>
         </div>
     `;
 }

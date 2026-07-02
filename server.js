@@ -2376,15 +2376,15 @@ app.get("/api/statistiche/valori", async (req,res) => {
         SELECT g.id,g.data,g.tipo_gara AS tipo,g.tipo_arco,g.distanza,se.valore
         FROM gare g
         JOIN score_entries se ON se.gara_id = g.id
-        WHERE 1=1 ${fG.where}
-    `, fG.params);
+        WHERE g.user_id = ? ${fG.where}
+    `, [req.user.id, ...fG.params]);
 
     const allenamenti = await dbAllExtra(`
         SELECT a.id,a.data,a.tipo_allenamento AS tipo,a.tipo_arco,a.distanza,a.piazzole,se.valore
         FROM allenamenti a
         JOIN allenamento_score_entries se ON se.allenamento_id = a.id
-        WHERE 1=1 ${fA.where}
-    `, fA.params);
+        WHERE a.user_id = ? ${fA.where}
+    `, [req.user.id, ...fA.params]);
 
     function distribuzione(rows){
         const counts = {};

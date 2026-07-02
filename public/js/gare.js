@@ -7,7 +7,6 @@ const tipoGaraContainer = document.getElementById("tipoGaraContainer");
 const scoreContainer = document.getElementById("scoreContainer");
 const keyboardLegend = document.getElementById("keyboardLegend");
 const generaScoreBtn = document.getElementById("generaScore");
-const generaScoreBtn = document.getElementById("generaScore");
 
 const archi = {
     "Indoor 18m": ["Olimpico", "Compound", "Arco Nudo", "Longbow"],
